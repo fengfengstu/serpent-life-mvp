@@ -65,6 +65,11 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("snake-body-v3", "player-module-2.png");
     this.load.image("snake-memory-v3", "player-module-3.png");
     this.load.image("snake-tail-v3", "player-module-4.png");
+    this.load.setPath("assets/generated/sprite-forge/processed/skill-vfx-v4");
+    this.load.image("vfx-fire-ring-v4", "skill-vfx-1.png");
+    this.load.image("vfx-frost-field-v4", "skill-vfx-2.png");
+    this.load.image("vfx-shield-star-v4", "skill-vfx-3.png");
+    this.load.image("vfx-lightning-core-v4", "skill-vfx-4.png");
   }
 
   create() {
@@ -340,6 +345,9 @@ class SerpentLifeScene extends Phaser.Scene {
     this.cameras.main.setScroll(0, 0);
     this.worldLayer?.removeAll(true);
     this.fxLayer?.removeAll(true);
+    this.skillLayer?.removeAll(true);
+    this.skillLayer?.destroy();
+    this.skillLayer = null;
     this.snakeLayer?.removeAll(true);
     this.uiLayer?.removeAll(true);
     this.cameraTarget?.destroy();
@@ -409,6 +417,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.drawBorder();
 
     this.pickupLayer = this.add.container(0, 0);
+    this.skillLayer = this.add.container(0, 0).setDepth(28);
     this.enemyLayer = this.add.container(0, 0);
     this.projectileLayer = this.add.container(0, 0);
     this.worldLayer.add([this.pickupLayer, this.enemyLayer, this.projectileLayer]);
@@ -506,6 +515,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.updateProjectiles(dt, ms);
     this.updateShots(dt, ms);
     this.updateSkills(dt, ms);
+    this.renderSkillAuras();
     this.updateSpawns(ms);
     this.drawSnake();
     this.updateHud();
@@ -708,8 +718,10 @@ class SerpentLifeScene extends Phaser.Scene {
     if (skill.id === "fire") {
       for (let s = 0; s < this.run.segments; s += 2) {
         const p = this.getSegmentPoint(s);
-        this.addRing(p.x, p.y, 92 + level * 12, COLORS.ember, 0.34);
-        this.damageAround(p.x, p.y, 92 + level * 12, 2.2 + level * 0.4, COLORS.ember);
+        const radius = 96 + level * 14;
+        this.addSkillPulse(p.x, p.y, "vfx-fire-ring-v4", radius * 1.7, COLORS.ember, 0.58, 380);
+        this.addRing(p.x, p.y, radius, COLORS.ember, 0.42);
+        this.damageAround(p.x, p.y, radius, 2.2 + level * 0.4, COLORS.ember);
       }
       return;
     }
@@ -718,6 +730,7 @@ class SerpentLifeScene extends Phaser.Scene {
         enemy.slowMs = Math.max(enemy.slowMs, 1200);
       });
       this.damageAround(this.player.x, this.player.y, 210, 1.6 + level * 0.3, COLORS.frost);
+      this.addSkillPulse(this.player.x, this.player.y, "vfx-frost-field-v4", 260, COLORS.frost, 0.5, 560);
       this.addRing(this.player.x, this.player.y, 210, COLORS.frost, 0.32);
       return;
     }
@@ -735,6 +748,7 @@ class SerpentLifeScene extends Phaser.Scene {
     }
     if (skill.id === "shield") {
       this.run.invulnMs = Math.max(this.run.invulnMs, 1600 + level * 220);
+      this.addSkillPulse(this.player.x, this.player.y, "vfx-shield-star-v4", 145 + level * 16, COLORS.violet, 0.58, 460);
       this.addRing(this.player.x, this.player.y, 128 + level * 16, COLORS.violet, 0.38);
       this.damageAround(this.player.x, this.player.y, 116 + level * 12, 1.4 + level * 0.25, COLORS.violet);
       return;
@@ -961,7 +975,8 @@ class SerpentLifeScene extends Phaser.Scene {
     const radius = 54 + level * 8 + (this.run.comboHighlights.includes("steam") ? 20 : 0);
     for (let s = 0; s < this.run.segments; s += Math.max(2, 5 - level)) {
       const p = this.getSegmentPoint(s);
-      this.addRing(p.x, p.y, radius, COLORS.ember, 0.22);
+      this.addSkillPulse(p.x, p.y, "vfx-fire-ring-v4", radius * 1.45, COLORS.ember, 0.4, 320);
+      this.addRing(p.x, p.y, radius, COLORS.ember, 0.28);
       this.damageAround(p.x, p.y, radius, 1 + level * 0.35, COLORS.ember);
     }
   }
@@ -973,15 +988,17 @@ class SerpentLifeScene extends Phaser.Scene {
     this.nextFrostFieldMs -= ms;
     if (this.nextFrostFieldMs <= 0) {
       this.nextFrostFieldMs = Math.max(160, 360 - level * 30);
-      const sprite = this.add.image(this.player.x, this.player.y, "snake-glow").setTint(COLORS.frost);
-      sprite.setDisplaySize(72 + level * 10, 72 + level * 10).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.18);
+      const sprite = this.add.image(this.player.x, this.player.y, "vfx-frost-field-v4").setTint(COLORS.frost);
+      sprite.setDisplaySize(84 + level * 11, 74 + level * 10).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.36);
+      sprite.setRotation(this.player.angle + Math.PI / 2);
       this.fxLayer.add(sprite);
       this.frostFields.push({ x: this.player.x, y: this.player.y, radius: 38 + level * 5, lifeMs: 1250 + level * 120, sprite });
     }
     for (let i = this.frostFields.length - 1; i >= 0; i -= 1) {
       const f = this.frostFields[i];
       f.lifeMs -= ms;
-      f.sprite.setAlpha(clamp(f.lifeMs / 1500, 0, 1) * 0.18);
+      f.sprite.setAlpha(clamp(f.lifeMs / 1500, 0, 1) * 0.34);
+      f.sprite.rotation += dt * 0.22;
       for (let e = this.enemies.length - 1; e >= 0; e -= 1) {
         const enemy = this.enemies[e];
         if (Phaser.Math.Distance.Between(f.x, f.y, enemy.x, enemy.y) < f.radius + enemy.radius) {
@@ -1094,6 +1111,71 @@ class SerpentLifeScene extends Phaser.Scene {
       const idx = this.enemies.indexOf(target);
       this.damageEnemy(idx, 1.2 + level * 0.38, COLORS.playerShot);
       origin = target;
+    }
+  }
+
+  renderSkillAuras() {
+    if (!this.skillLayer || !this.player || this.mode !== "playing") return;
+    this.skillLayer.removeAll(true);
+    const t = this.run.timeMs / 1000;
+
+    const fireLevel = this.run.skills.fire;
+    if (fireLevel > 0) {
+      const step = Math.max(3, 6 - fireLevel);
+      const radius = 54 + fireLevel * 8 + (this.run.comboHighlights.includes("steam") ? 20 : 0);
+      const nodes = [];
+      for (let s = 0; s < this.run.segments; s += step) nodes.push(s);
+      nodes.slice(0, 2 + Math.min(2, fireLevel)).forEach((s) => {
+        const p = this.getSegmentPoint(s);
+        if (!p) return;
+        const ring = this.add.image(p.x, p.y, "vfx-fire-ring-v4");
+        ring.setDisplaySize(radius * 1.48, radius * 1.48);
+        ring.setRotation(t * 2.2 + s * 0.35);
+        ring.setBlendMode(Phaser.BlendModes.ADD);
+        ring.setAlpha(0.16 + Math.sin(t * 8 + s) * 0.04);
+        this.skillLayer.add(ring);
+      });
+    }
+
+    const turretLevel = this.run.skills.turret;
+    if (turretLevel > 0) {
+      const count = Math.min(3 + turretLevel, Math.ceil(this.run.segments / 4));
+      for (let i = 0; i < count; i += 1) {
+        const p = this.getSegmentPoint(1 + i * Math.max(2, Math.floor(this.run.segments / Math.max(1, count))));
+        if (!p) continue;
+        const turret = this.add.image(p.x, p.y, "player-projectile");
+        turret.setDisplaySize(22, 22);
+        turret.setRotation(t * 5 + i);
+        turret.setBlendMode(Phaser.BlendModes.ADD);
+        turret.setAlpha(0.86);
+        this.skillLayer.add(turret);
+      }
+    }
+
+    const shieldLevel = this.run.skills.shield;
+    if (shieldLevel > 0) {
+      const count = Math.min(5, 1 + shieldLevel);
+      const radius = 44 + shieldLevel * 6;
+      for (let i = 0; i < count; i += 1) {
+        const a = t * 2.7 + (i / count) * TWO_PI;
+        const star = this.add.image(this.player.x + Math.cos(a) * radius, this.player.y + Math.sin(a) * radius, "vfx-shield-star-v4");
+        star.setDisplaySize(29 + shieldLevel * 3, 29 + shieldLevel * 3);
+        star.setRotation(-t * 4.5 + i);
+        star.setBlendMode(Phaser.BlendModes.ADD);
+        star.setAlpha(0.66);
+        this.skillLayer.add(star);
+      }
+    }
+
+    const lightningLevel = this.run.skills.lightning;
+    if (lightningLevel > 0) {
+      const p = this.getSegmentPoint(Math.min(this.run.segments - 1, 2 + lightningLevel));
+      const core = this.add.image(p.x, p.y, "vfx-lightning-core-v4");
+      core.setDisplaySize(34 + lightningLevel * 5, 34 + lightningLevel * 5);
+      core.setRotation(t * -3.4);
+      core.setBlendMode(Phaser.BlendModes.ADD);
+      core.setAlpha(0.56 + Math.sin(t * 11) * 0.1);
+      this.skillLayer.add(core);
     }
   }
 
@@ -1296,6 +1378,26 @@ class SerpentLifeScene extends Phaser.Scene {
     const g = this.add.circle(x, y, 8, color, 0).setStrokeStyle(4, color, alpha);
     this.fxLayer.add(g);
     this.tweens.add({ targets: g, radius, alpha: 0, duration: 260, ease: "Cubic.out", onComplete: () => g.destroy() });
+  }
+
+  addSkillPulse(x, y, texture, size, tint, alpha = 0.72, duration = 420) {
+    const fx = this.add.image(x, y, texture);
+    fx.setDisplaySize(size * 0.58, size * 0.58);
+    fx.setTint(tint);
+    fx.setBlendMode(Phaser.BlendModes.ADD);
+    fx.setAlpha(alpha);
+    fx.setRotation(Math.random() * TWO_PI);
+    this.fxLayer.add(fx);
+    this.tweens.add({
+      targets: fx,
+      displayWidth: size,
+      displayHeight: size,
+      angle: fx.angle + 96,
+      alpha: 0,
+      duration,
+      ease: "Cubic.out",
+      onComplete: () => fx.destroy(),
+    });
   }
 
   addBolt(x1, y1, x2, y2, color) {

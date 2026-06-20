@@ -64,11 +64,27 @@ async function runViewport(browser, viewport) {
         "snake-body-v3",
         "snake-memory-v3",
         "snake-tail-v3",
+        "vfx-fire-ring-v4",
+        "vfx-frost-field-v4",
+        "vfx-shield-star-v4",
+        "vfx-lightning-core-v4",
       ].map((key) => [key, scene.textures.exists(key)]),
       enemyAnim: scene.enemies[0]?.sprite?.anims?.currentAnim?.key ?? null,
     };
   });
   await page.screenshot({ path: `qa-smoke-${viewport.name}-first.png`, fullPage: false });
+  const skillVisuals = await page.evaluate(() => {
+    const scene = window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene;
+    ["fire", "frost", "turret", "shield", "lightning"].forEach((id) => {
+      scene.run.skills[id] = 1;
+    });
+    scene.renderSkillAuras();
+    return {
+      skillLayerChildren: scene.skillLayer?.length ?? 0,
+      skills: { ...scene.run.skills },
+    };
+  });
+  await page.screenshot({ path: `qa-smoke-${viewport.name}-skills.png`, fullPage: false });
 
   await page.mouse.move(viewport.width * 0.38, viewport.height * 0.72);
   await page.mouse.down();
@@ -119,6 +135,7 @@ async function runViewport(browser, viewport) {
     viewport,
     logs: logs.filter((line) => !line.includes("GPU stall due to ReadPixels")),
     first,
+    skillVisuals,
     joystick,
     upgrade,
     endingOverflow: endingOverflow.length,
@@ -142,6 +159,7 @@ for (const result of results) {
   if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
   if (result.first.enemyAnim !== "enemy-idle-v2") failures.push(`${result.viewport.name}: enemy animation is not v2`);
+  if (result.skillVisuals.skillLayerChildren < 5) failures.push(`${result.viewport.name}: skill visuals did not render`);
   if (!result.joystick.pointerState || !result.joystick.joyBase) failures.push(`${result.viewport.name}: joystick did not activate`);
   if (!result.upgrade.reached || result.upgrade.modeAfterPick !== "playing") failures.push(`${result.viewport.name}: upgrade flow did not return to playing`);
   if (result.endingOverflow || result.overflow) failures.push(`${result.viewport.name}: UI overflow`);
