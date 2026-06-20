@@ -82,6 +82,10 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("vfx-frost-field-v5", "vfx-frost-field-v5.png");
     this.load.image("vfx-shield-star-v5", "vfx-shield-star-v5.png");
     this.load.image("vfx-lightning-core-v5", "vfx-lightning-core-v5.png");
+    this.load.setPath("assets/generated/v8-open/vfx/fire");
+    this.load.spritesheet("fire-circle-v8", "fire_circles_400x400.png", { frameWidth: 400, frameHeight: 400 });
+    this.load.setPath("assets/generated/v8-open/vfx/lightning");
+    this.load.image("lightning-bolt-v8", "lightning3.png");
     this.load.setPath("assets/generated/v5-hd/processed/enemies");
     this.load.image("enemy-drifter-v5", "enemy-drifter-v5.png");
     this.load.image("enemy-hunter-v5", "enemy-hunter-v5.png");
@@ -1611,6 +1615,15 @@ class SerpentLifeScene extends Phaser.Scene {
       for (let s = 1; s < Math.min(this.run.segments, 13); s += step) {
         const side = s % 2 === 0 ? 1 : -1;
         const flame = this.segmentAnchor(s, side, 23);
+        if (this.textures.exists("fire-circle-v8")) {
+          const frame = Math.floor((t * 18 + s * 5) % 64);
+          const aura = this.add.sprite(flame.point.x, flame.point.y, "fire-circle-v8", frame);
+          aura.setDisplaySize(126 + fireLevel * 22, 126 + fireLevel * 22);
+          aura.setRotation(flame.angle + side * 0.72 + Math.sin(t * 4 + s) * 0.18);
+          aura.setBlendMode(Phaser.BlendModes.ADD);
+          aura.setAlpha(0.22 + fireLevel * 0.035);
+          this.skillLayer.add(aura);
+        }
         const ring = this.add.graphics();
         ring.setPosition(flame.point.x, flame.point.y);
         ring.setRotation(flame.angle + Math.sin(t * 5 + s) * 0.08);
@@ -1850,7 +1863,22 @@ class SerpentLifeScene extends Phaser.Scene {
         body.setDisplaySize(82, 82);
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
-        this.snakeLayer.add([glow, body]);
+        const crest = this.add.graphics();
+        crest.setPosition(p.x, p.y);
+        crest.setRotation(headAngle);
+        crest.setBlendMode(Phaser.BlendModes.ADD);
+        crest.lineStyle(3, COLORS.gold, hurt ? 0.5 : 0.32);
+        crest.beginPath();
+        crest.moveTo(4, -18);
+        crest.lineTo(28, -7);
+        crest.lineTo(8, 0);
+        crest.lineTo(28, 7);
+        crest.lineTo(4, 18);
+        crest.strokePath();
+        crest.fillStyle(hurt ? COLORS.rose : COLORS.jade, 0.62);
+        crest.fillCircle(18, -7, 3.5);
+        crest.fillCircle(18, 7, 3.5);
+        this.snakeLayer.add([glow, body, crest]);
       } else {
         const texture = isTail ? "snake-tail-v5" : isMemory ? "snake-memory-v5" : "snake-body-v5";
         const displayX = isTail ? 46 + taper * 16 : isMemory ? 42 + taper * 8 : 38 + taper * 8;
@@ -1860,7 +1888,22 @@ class SerpentLifeScene extends Phaser.Scene {
         body.setRotation((p.angle ?? this.player.angle) + (isTail ? 0 : Math.PI / 2));
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
-        this.snakeLayer.add([glow, body]);
+        const detail = this.add.graphics();
+        detail.setPosition(p.x, p.y);
+        detail.setRotation(p.angle ?? this.player.angle);
+        detail.setBlendMode(Phaser.BlendModes.ADD);
+        detail.lineStyle(isMemory ? 3 : 2, isMemory ? COLORS.gold : COLORS.jade, isMemory ? 0.34 : 0.14);
+        detail.beginPath();
+        detail.moveTo(-displayX * 0.28, 0);
+        detail.lineTo(displayX * 0.28, 0);
+        detail.strokePath();
+        if (isMemory) {
+          detail.lineStyle(2, COLORS.reward, 0.42);
+          detail.strokeCircle(0, 0, Math.min(displayX, displayY) * 0.36);
+          detail.fillStyle(COLORS.reward, 0.24);
+          detail.fillCircle(0, 0, 5);
+        }
+        this.snakeLayer.add([glow, body, detail]);
       }
     }
     this.snakeLayer.setDepth(30);
@@ -2011,13 +2054,14 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   addFireRingImage(x, y, size, level = 1, alpha = 0.55) {
-    if (!this.textures.exists("vfx-fire-ring-v5")) return;
-    const image = this.add.image(x, y, "vfx-fire-ring-v5");
-    const display = size * (level >= 4 ? 1.16 : 1);
+    const useV8 = this.textures.exists("fire-circle-v8");
+    if (!useV8 && !this.textures.exists("vfx-fire-ring-v5")) return;
+    const image = useV8 ? this.add.sprite(x, y, "fire-circle-v8", Math.floor(Math.random() * 64)) : this.add.image(x, y, "vfx-fire-ring-v5");
+    const display = useV8 ? size * (level >= 4 ? 3.1 : 2.75) : size * (level >= 4 ? 1.16 : 1);
     image.setDisplaySize(display, display);
-    image.setTint(level >= 3 ? COLORS.gold : COLORS.ember);
+    if (!useV8) image.setTint(level >= 3 ? COLORS.gold : COLORS.ember);
     image.setBlendMode(Phaser.BlendModes.ADD);
-    image.setAlpha(alpha);
+    image.setAlpha(useV8 ? Math.min(0.86, alpha + 0.16) : alpha);
     image.setRotation(Math.random() * TWO_PI);
     this.fxLayer.add(image);
     this.tweens.add({
@@ -2136,6 +2180,26 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   addBolt(x1, y1, x2, y2, color, width = 2.4, alpha = 0.48) {
+    if (this.textures.exists("lightning-bolt-v8")) {
+      const midX = (x1 + x2) / 2;
+      const midY = (y1 + y2) / 2;
+      const length = Phaser.Math.Distance.Between(x1, y1, x2, y2);
+      const sprite = this.add.image(midX, midY, "lightning-bolt-v8");
+      sprite.setDisplaySize(Math.max(64, length * 0.96), Math.max(20, width * 9));
+      sprite.setRotation(Phaser.Math.Angle.Between(x1, y1, x2, y2));
+      sprite.setBlendMode(Phaser.BlendModes.ADD);
+      sprite.setTint(COLORS.cyan);
+      sprite.setAlpha(Math.min(0.42, alpha * 0.78));
+      this.fxLayer.add(sprite);
+      this.tweens.add({
+        targets: sprite,
+        alpha: 0,
+        scaleY: 0.55,
+        duration: 170,
+        ease: "Cubic.out",
+        onComplete: () => sprite.destroy(),
+      });
+    }
     const g = this.add.graphics();
     g.lineStyle(width, color, alpha);
     g.beginPath();
@@ -2210,7 +2274,7 @@ class SerpentLifeScene extends Phaser.Scene {
       return audio;
     };
     this.audioAssets = {
-      bgm: make("assets/free/bgm-empty-city.ogg", 0.16, true),
+      bgm: make("assets/free/v8-audio/bgm-fast-fight.ogg", 0.38, true),
       pickup: make("assets/free/sfx-pickup.ogg", 0.46),
       hit: make("assets/free/sfx-hit.ogg", 0.34),
       dash: make("assets/free/sfx-dash.ogg", 0.26),
@@ -2220,16 +2284,16 @@ class SerpentLifeScene extends Phaser.Scene {
 
   startBgmAsset() {
     if (!this.audioAssets?.bgm || this.mode === "menu") return;
-    this.audioAssets.bgm.volume = this.boss ? 0.11 : 0.15;
+    this.audioAssets.bgm.volume = this.boss ? 0.5 : 0.38;
     this.audioAssets.bgm.play().catch(() => {});
   }
 
   updateBgmAssetState() {
     if (!this.audioAssets?.bgm) return;
     const lowHp = (this.run?.coreHp ?? GAME_CONFIG.initialCoreHp) <= 1;
-    const pressure = clamp((this.enemies?.length ?? 0) / 18 + (this.boss ? 0.45 : 0) + (lowHp ? 0.28 : 0) + (this.run?.memoryOverflow ?? 0) * 0.04, 0, 1.25);
-    this.audioAssets.bgm.volume = 0.12 + pressure * 0.045;
-    this.audioAssets.bgm.playbackRate = this.boss ? 1.035 : 1 + Math.min(0.025, pressure * 0.015);
+    const pressure = clamp((this.enemies?.length ?? 0) / 18 + (this.boss ? 0.5 : 0) + (lowHp ? 0.28 : 0) + (this.run?.memoryOverflow ?? 0) * 0.04, 0, 1.25);
+    this.audioAssets.bgm.volume = 0.34 + pressure * 0.12;
+    this.audioAssets.bgm.playbackRate = this.boss ? 1.045 : 1 + Math.min(0.035, pressure * 0.022);
   }
 
   stopBgmAsset() {

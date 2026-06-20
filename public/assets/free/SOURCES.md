@@ -8,5 +8,6 @@ All raster and audio assets in this folder are free assets used for this prototy
 - `rpg-sheet.png`, `rpg-sample-town.png`, `rpg-sample-dungeon.png`: Kenney Roguelike/RPG pack, Creative Commons CC0.
 - `sfx-pickup.ogg`, `sfx-hit.ogg`, `sfx-dash.ogg`, `sfx-level.ogg`: Kenney Impact Sounds, Creative Commons CC0.
 - `bgm-empty-city.ogg`: "EmptyCity: Background Music" by yd on OpenGameArt, Creative Commons CC0.
+- `v8-audio/bgm-fast-fight.ogg`: "Fast Fight / Battle Music" on OpenGameArt, free prototype battle loop source. Verify page license before non-prototype commercial use.
 
 Attribution is not required for CC0 assets, but source notes are kept here for auditability.

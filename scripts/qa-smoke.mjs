@@ -61,9 +61,11 @@ async function runViewport(browser, viewport) {
         "snake-memory-v5",
         "snake-tail-v5",
         "vfx-fire-ring-v5",
+        "fire-circle-v8",
         "vfx-frost-field-v5",
         "vfx-shield-star-v5",
         "vfx-lightning-core-v5",
+        "lightning-bolt-v8",
         "enemy-drifter-v5",
         "enemy-hunter-v5",
         "enemy-bloomer-v5",
@@ -73,6 +75,7 @@ async function runViewport(browser, viewport) {
         "arena-v5",
         "snake-head-v5",
         "vfx-fire-ring-v5",
+        "fire-circle-v8",
         "enemy-drifter-v5",
       ].map((key) => {
         const source = scene.textures.get(key).source[0];
@@ -107,6 +110,8 @@ async function runViewport(browser, viewport) {
       hasMusic: !!scene.musicNodes,
       layer: scene.musicDebug?.layer ?? null,
       hasAssetBgm: !!scene.audioAssets?.bgm,
+      bgmSrc: scene.audioAssets?.bgm?.src ?? null,
+      bgmVolume: scene.audioAssets?.bgm?.volume ?? 0,
     };
 
     scene.run.nextEventMs = 0;
@@ -279,7 +284,7 @@ for (const result of results) {
   if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
   if (!String(result.first.firstEnemyTexture).endsWith("-v5")) failures.push(`${result.viewport.name}: first enemy is not V5 art`);
-  if (!result.first.textureSourceSizes.every(([key, w, h]) => key === "arena-v5" ? w >= 2048 && h >= 2048 : w >= 512 && h >= 512)) {
+  if (!result.first.textureSourceSizes.every(([key, w, h]) => key === "arena-v5" ? w >= 2048 && h >= 2048 : key === "fire-circle-v8" ? w >= 3200 && h >= 3200 : w >= 512 && h >= 512)) {
     failures.push(`${result.viewport.name}: V5 source texture is not high resolution`);
   }
   result.first.canvas.highDprBackingStore =
@@ -287,6 +292,7 @@ for (const result of results) {
     result.first.canvas.height >= result.first.canvas.cssHeight * 2;
   if (result.skillVisuals.skillLayerChildren < 5) failures.push(`${result.viewport.name}: skill visuals did not render`);
   if (!result.gameplayProbe.audioBefore.hasCtx || !result.gameplayProbe.audioBefore.hasMusic || !result.gameplayProbe.audioBefore.hasAssetBgm) failures.push(`${result.viewport.name}: asset audio/BGM did not start`);
+  if (!String(result.gameplayProbe.audioBefore.bgmSrc).includes("bgm-fast-fight.ogg") || result.gameplayProbe.audioBefore.bgmVolume < 0.3) failures.push(`${result.viewport.name}: V8 battle BGM is missing or too quiet`);
   if (!result.gameplayProbe.eventStarted) failures.push(`${result.viewport.name}: wave event did not start`);
   if (result.gameplayProbe.bodyRisk.cracks < 1) failures.push(`${result.viewport.name}: body risk did not add cracks`);
   if (result.gameplayProbe.growthProbe.stageAfterEight !== "ring") failures.push(`${result.viewport.name}: growth stage did not advance`);
