@@ -1,6 +1,21 @@
 {
-  "latest": "v5-fork-audio-gameplay",
+  "latest": "v5-fork-roguelike-remix",
   "releases": [
+    {
+      "id": "v5-fork-roguelike-remix",
+      "label": "v5 fork · Roguelike Remix 强化版",
+      "sourceCommit": "dbc26db",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v5-fork-roguelike-remix/",
+      "notes": [
+        "BGM 改为 CC0 音乐素材主导，程序合成降级为短音效点缀，减少合成味",
+        "蛇成长重构为幼蛇、环蛇、脊蛇、阵蛇、终蜕、贪满六阶段，满长后转为过载记忆，不再只是无意义数字",
+        "新增遗物、过载选择和导演式随机意外事件，让每局不仅是固定技能牌洗牌",
+        "火环增加沿蛇身常驻燃烧光环、素材叠加和爆发粒子，技能存在感更明确",
+        "Boss 增加顶部 HUD 血条和场内贴身血条，弱点破盾、护盾数和 HP 百分比可见",
+        "烟测扩展到资产 BGM、成长阶段、过载牌、导演事件、火环生成、Boss 血条、重开清理和移动触控"
+      ]
+    },
     {
       "id": "v5-fork-audio-gameplay",
       "label": "v5 fork · 声音与玩法重制版",
