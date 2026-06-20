@@ -1,6 +1,22 @@
 {
-  "latest": "v8-audio-visual-overhaul",
+  "latest": "v9-european-fantasy-progression",
   "releases": [
+    {
+      "id": "v9-european-fantasy-progression",
+      "label": "v9 · 欧洲奇幻流程大修版",
+      "sourceCommit": "4d63e34",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v9-european-fantasy-progression/",
+      "notes": [
+        "美术方向改为欧洲高奇幻 / D&D 冒险书 / 羊皮纸战棋资产，避免旧版 dark/noisy 暗金噪点路线",
+        "生成并评审 5 套新视觉方向，选择 parchment tactical board-game 方向作为 V9 主风格",
+        "新增 V9 European Fantasy Art Direction 文档，明确禁止 dark、gritty、noisy、过度暗金纹理等提示词",
+        "接入 v9-euro 蛇、敌人、精英、Boss、拾取物、技能图标和 2048 石板竞技场资产",
+        "单局流程扩展为四章结构，新增记忆典狱长、绯红蜕王、档案蛇像三个 Boss",
+        "新增精英事件：典狱巡行、绯红潮汐、蛇像敕令，延长流程并提高局内波峰",
+        "烟测新增 V9 纹理、章节、多 Boss、精英事件、最终 Boss 胜利和重开清理断言"
+      ]
+    },
     {
       "id": "v8-audio-visual-overhaul",
       "label": "v8 · 音画重制强化版",
