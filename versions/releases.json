@@ -5,7 +5,7 @@
       "id": "v5-fork-audio-gameplay",
       "label": "v5 fork · 声音与玩法重制版",
       "sourceCommit": "b815211",
-      "deployCommit": "pending",
+      "deployCommit": "7bb9e59",
       "path": "/serpent-life-mvp/versions/v5-fork-audio-gameplay/",
       "notes": [
         "新增动态分层 BGM：基础、事件、Boss、低血量与身体裂痕压力共同影响音乐层",
