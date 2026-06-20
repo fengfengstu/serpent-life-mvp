@@ -5,7 +5,7 @@
       "id": "v9-1-european-fantasy-hidpi",
       "label": "v9.1 · 欧洲奇幻高清渲染版",
       "sourceCommit": "ea6ada4",
-      "deployCommit": "pending",
+      "deployCommit": "0d174f7",
       "path": "/serpent-life-mvp/versions/v9-1-european-fantasy-hidpi/",
       "notes": [
         "在 V9 欧洲奇幻 / 羊皮纸战棋风格基础上新增真正 2x high-DPI WebGL 后备画布，减少手机端锯齿和压缩感",
