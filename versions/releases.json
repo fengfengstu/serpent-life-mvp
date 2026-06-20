@@ -5,7 +5,7 @@
       "id": "v6-defold-formal",
       "label": "v6 formal · Defold 正式测试版",
       "sourceCommit": "900acfc",
-      "deployCommit": "pending",
+      "deployCommit": "7046fe3",
       "path": "/serpent-life-mvp/versions/v6-defold-formal/",
       "notes": [
         "保留 V6 高清 PNG 资产与 Defold 1.12.4 HTML5/WASM 管线",
