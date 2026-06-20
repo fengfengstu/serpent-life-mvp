@@ -1,0 +1,386 @@
+name: "main"
+scale_along_z: 0
+embedded_instances {
+  id: "controller"
+  data: "components {\n  id: \"script\"\n  component: \"/main/main.script\"\n}\n"
+  position {
+  }
+}
+embedded_instances {
+  id: "bg"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"arena_floor_v5_2048\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 195.0
+    y: 422.0
+    z: -0.9
+  }
+}
+embedded_instances {
+  id: "snake_head"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_head_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 195.0
+    y: 422.0
+    z: 0.4
+  }
+}
+embedded_instances {
+  id: "segment_1"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 175.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_2"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 155.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_3"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 135.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_4"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 115.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_5"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 95.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_6"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 75.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_7"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 55.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_8"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 35.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_9"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: 15.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_10"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -5.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_11"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_body_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -25.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "segment_12"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -45.0
+    y: 422.0
+    z: 0.25
+  }
+}
+embedded_instances {
+  id: "enemy_1"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_hunter_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_2"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_bloomer_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_3"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_drifter_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_4"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_hunter_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_5"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_bloomer_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_6"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_drifter_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_7"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_hunter_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_8"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_bloomer_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_9"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_drifter_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "enemy_10"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"enemy_hunter_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.2
+  }
+}
+embedded_instances {
+  id: "pickup_1"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.15
+  }
+}
+embedded_instances {
+  id: "pickup_2"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.15
+  }
+}
+embedded_instances {
+  id: "pickup_3"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.15
+  }
+}
+embedded_instances {
+  id: "pickup_4"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.15
+  }
+}
+embedded_instances {
+  id: "pickup_5"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"snake_memory_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -200.0
+    y: -200.0
+    z: 0.15
+  }
+}
+embedded_instances {
+  id: "fire_1"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_fire_ring_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.55
+  }
+}
+embedded_instances {
+  id: "fire_2"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_fire_ring_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.55
+  }
+}
+embedded_instances {
+  id: "fire_3"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_fire_ring_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.55
+  }
+}
+embedded_instances {
+  id: "fire_4"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_fire_ring_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.55
+  }
+}
+embedded_instances {
+  id: "frost_1"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_frost_field_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.1
+  }
+}
+embedded_instances {
+  id: "frost_2"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_frost_field_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.1
+  }
+}
+embedded_instances {
+  id: "frost_3"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_frost_field_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.1
+  }
+}
+embedded_instances {
+  id: "frost_4"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_frost_field_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.1
+  }
+}
+embedded_instances {
+  id: "frost_5"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_frost_field_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.1
+  }
+}
+embedded_instances {
+  id: "frost_6"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_frost_field_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.1
+  }
+}
+embedded_instances {
+  id: "shield"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_shield_star_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.6
+  }
+}
+embedded_instances {
+  id: "lightning"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"vfx_lightning_core_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -300.0
+    y: -300.0
+    z: 0.62
+  }
+}
+embedded_instances {
+  id: "boss"
+  data: "embedded_components {\n  id: \"sprite\"\n  type: \"sprite\"\n  data: \"default_animation: \\\"boss_core_v5\\\"\\nmaterial: \\\"/builtins/materials/sprite.material\\\"\\ntextures {\\n  sampler: \\\"texture_sampler\\\"\\n  texture: \\\"/main/gameplay.atlas\\\"\\n}\\n\"\n}\n"
+  position {
+    x: -500.0
+    y: -500.0
+    z: 0.35
+  }
+}

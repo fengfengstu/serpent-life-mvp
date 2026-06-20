@@ -25,6 +25,7 @@
 | v3-phaser-art-pass | `/versions/v3-phaser-art-pass/` | Phaser 主角与场景美术强化版 |
 | v4-skill-vfx-pass | `/versions/v4-skill-vfx-pass/` | 技能可见性与 VFX 补齐版 |
 | v5-hd-art-vfx | `/versions/v5-hd-art-vfx/` | 高清资产、火环粒子与清晰度强化版 |
+| v6-defold-spike | `/versions/v6-defold-spike/` | Defold HTML5/WASM 技术验证分叉 |
 
 ## 后续发布要求
 

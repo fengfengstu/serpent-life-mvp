@@ -1,0 +1,22 @@
+[bootstrap]
+main_collection = /main/main.collectionc
+
+[script]
+shared_state = 1
+
+[display]
+width = 390
+height = 844
+high_dpi = 1
+samples = 4
+
+[html5]
+scale_mode = stretch
+
+[input]
+game_binding = /input/game.input_bindingc
+
+[physics]
+gravity_y = 0
+scale = 0.01
+

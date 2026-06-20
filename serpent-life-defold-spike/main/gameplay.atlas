@@ -1,0 +1,43 @@
+images {
+  image: "/assets/images/arena_floor_v5_2048.png"
+}
+images {
+  image: "/assets/images/snake_head_v5.png"
+}
+images {
+  image: "/assets/images/snake_body_v5.png"
+}
+images {
+  image: "/assets/images/snake_memory_v5.png"
+}
+images {
+  image: "/assets/images/snake_tail_v5.png"
+}
+images {
+  image: "/assets/images/vfx_fire_ring_v5.png"
+}
+images {
+  image: "/assets/images/vfx_frost_field_v5.png"
+}
+images {
+  image: "/assets/images/vfx_shield_star_v5.png"
+}
+images {
+  image: "/assets/images/vfx_lightning_core_v5.png"
+}
+images {
+  image: "/assets/images/enemy_drifter_v5.png"
+}
+images {
+  image: "/assets/images/enemy_hunter_v5.png"
+}
+images {
+  image: "/assets/images/enemy_bloomer_v5.png"
+}
+images {
+  image: "/assets/images/boss_core_v5.png"
+}
+margin: 0
+extrude_borders: 2
+inner_padding: 0
+
