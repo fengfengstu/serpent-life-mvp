@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#05070b" />
+    <title>此生为蛇 · 版本记录</title>
+    <style>
+      :root {
+        color: #fff8d0;
+        background: #05070b;
+        font-family: Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        padding: 28px 16px;
+        background:
+          radial-gradient(circle at 20% 12%, rgba(54, 232, 159, 0.14), transparent 28%),
+          radial-gradient(circle at 82% 0%, rgba(255, 74, 40, 0.16), transparent 24%),
+          linear-gradient(180deg, #071114, #05070b 58%);
+      }
+
+      main {
+        width: min(760px, 100%);
+        margin: 0 auto;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(32px, 9vw, 56px);
+        line-height: 1;
+      }
+
+      p {
+        margin: 0 0 18px;
+        color: #bdd4ca;
+        line-height: 1.65;
+      }
+
+      .release {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+        padding: 16px;
+        border: 1px solid rgba(255, 209, 102, 0.28);
+        border-radius: 8px;
+        background: rgba(7, 12, 16, 0.82);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      }
+
+      .release strong {
+        color: #ffd166;
+        font-size: 20px;
+      }
+
+      .release span {
+        color: #dbead4;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        width: fit-content;
+        padding: 0 16px;
+        border: 1px solid rgba(255, 248, 208, 0.62);
+        border-radius: 8px;
+        color: #141105;
+        background: linear-gradient(180deg, #ffd166, #a8bf5a);
+        font-weight: 900;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>此生为蛇 · 版本记录</h1>
+      <p>这些链接会保留对应构建，不再被后续版本覆盖。根目录可继续作为最新稳定版入口。</p>
+
+      <section class="release">
+        <strong>v2 · 战斗识别分色版</strong>
+        <span>玩家弹道改为青白，敌方弹道改为红橙，玩家/敌人/奖励颜色语义分离。</span>
+        <a href="./v2-color-semantics/">打开 v2</a>
+      </section>
+
+      <section class="release">
+        <strong>v1 · Sprite Forge 敌人与 Boss 版</strong>
+        <span>接入通过质检的敌人、Boss、命中特效动画，移动端烟测通过。</span>
+        <a href="./v1-sprite-forge/">打开 v1</a>
+      </section>
+    </main>
+  </body>
+</html>

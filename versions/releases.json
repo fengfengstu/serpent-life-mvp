@@ -1,0 +1,29 @@
+{
+  "latest": "v2-color-semantics",
+  "releases": [
+    {
+      "id": "v2-color-semantics",
+      "label": "v2 · 战斗识别分色版",
+      "sourceCommit": "8784176",
+      "deployCommit": "5728584",
+      "path": "/serpent-life-mvp/versions/v2-color-semantics/",
+      "notes": [
+        "玩家弹道改为青白",
+        "敌方与 Boss 弹道改为红橙",
+        "玩家、敌人、奖励的颜色语义分离"
+      ]
+    },
+    {
+      "id": "v1-sprite-forge",
+      "label": "v1 · Sprite Forge 敌人与 Boss 版",
+      "sourceCommit": "7856792",
+      "deployCommit": "8e8cee5",
+      "path": "/serpent-life-mvp/versions/v1-sprite-forge/",
+      "notes": [
+        "接入 Sprite Forge 敌人动画",
+        "接入 Sprite Forge Boss 动画",
+        "接入命中特效动画"
+      ]
+    }
+  ]
+}
