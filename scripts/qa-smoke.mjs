@@ -50,7 +50,10 @@ async function runViewport(browser, viewport) {
       hp: scene.run.coreHp,
       segments: scene.run.segments,
       pickups: scene.pickups.length,
-      visibleEnemies: scene.enemies.filter((e) => e.x > cam.scrollX && e.x < cam.scrollX + innerWidth && e.y > cam.scrollY && e.y < cam.scrollY + innerHeight).length,
+      visibleEnemies: (() => {
+        const view = cam.worldView;
+        return scene.enemies.filter((e) => e.x > view.x && e.x < view.right && e.y > view.y && e.y < view.bottom).length;
+      })(),
       textures: [
         "impact-1",
         "player-projectile",
@@ -299,7 +302,10 @@ async function runViewport(browser, viewport) {
     const cam = scene.cameras.main;
     return {
       mode: scene.mode,
-      playerVisible: scene.player.x > cam.scrollX && scene.player.x < cam.scrollX + innerWidth && scene.player.y > cam.scrollY && scene.player.y < cam.scrollY + innerHeight,
+      playerVisible: (() => {
+        const view = cam.worldView;
+        return scene.player.x > view.x && scene.player.x < view.right && scene.player.y > view.y && scene.player.y < view.bottom;
+      })(),
       hp: scene.run.coreHp,
       segments: scene.run.segments,
     };
@@ -342,6 +348,7 @@ for (const result of results) {
   result.first.canvas.highDprBackingStore =
     result.first.canvas.width >= result.first.canvas.cssWidth * 2 &&
     result.first.canvas.height >= result.first.canvas.cssHeight * 2;
+  if (!result.first.canvas.highDprBackingStore) failures.push(`${result.viewport.name}: canvas is not rendered at high DPR`);
   if (result.skillVisuals.skillLayerChildren < 5) failures.push(`${result.viewport.name}: skill visuals did not render`);
   if (!result.gameplayProbe.audioBefore.hasCtx || !result.gameplayProbe.audioBefore.hasMusic || !result.gameplayProbe.audioBefore.hasAssetBgm) failures.push(`${result.viewport.name}: asset audio/BGM did not start`);
   if (!String(result.gameplayProbe.audioBefore.bgmSrc).includes("bgm-fast-fight.ogg") || result.gameplayProbe.audioBefore.bgmVolume < 0.3) failures.push(`${result.viewport.name}: V8 battle BGM is missing or too quiet`);

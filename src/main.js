@@ -4,6 +4,7 @@ import { BOSS_STAGES, CHAPTERS, COLORS, ELITE_EVENTS, ENEMY_KINDS, GAME_CONFIG, 
 const W = 390;
 const H = 844;
 const TWO_PI = Math.PI * 2;
+const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, 2);
 const TEXT_RESOLUTION = Math.min(window.devicePixelRatio || 1, 3);
 const UI_FONT = "Arial, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif";
 
@@ -128,7 +129,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.uiLayer = this.add.container(0, 0).setScrollFactor(0).setDepth(70);
 
     this.cameras.main.setBackgroundColor(COLORS.ink);
-    this.scale.on("resize", this.layout, this);
+    this.applyRenderScale();
+    window.addEventListener("resize", () => this.resizeToWindow(), { passive: true });
     this.input.on("pointerdown", this.onPointerDown, this);
     this.input.on("pointermove", this.onPointerMove, this);
     this.input.on("pointerup", this.onPointerUp, this);
@@ -392,7 +394,41 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   viewSize() {
-    return { width: this.scale.width, height: this.scale.height };
+    const scale = this.displayScale();
+    return { width: this.scale.width / scale, height: this.scale.height / scale };
+  }
+
+  displayScale() {
+    const canvas = this.game?.canvas;
+    if (!canvas?.clientWidth || !canvas?.clientHeight) return RENDER_RESOLUTION;
+    return Math.max(1, canvas.width / canvas.clientWidth);
+  }
+
+  pointerPos(pointer) {
+    const scale = this.displayScale();
+    return { id: pointer.id, x: pointer.x / scale, y: pointer.y / scale };
+  }
+
+  cameraViewSize() {
+    const cam = this.cameras.main;
+    const zoom = cam.zoom || 1;
+    return { width: cam.width / zoom, height: cam.height / zoom };
+  }
+
+  applyRenderScale() {
+    const scale = this.displayScale();
+    const cam = this.cameras.main;
+    cam.setViewport(0, 0, this.scale.width, this.scale.height);
+    cam.setZoom(scale);
+  }
+
+  resizeToWindow() {
+    const width = Math.max(320, Math.round(window.innerWidth * RENDER_RESOLUTION));
+    const height = Math.max(568, Math.round(window.innerHeight * RENDER_RESOLUTION));
+    this.scale.resize(width, height);
+    this.applyRenderScale();
+    this.layout();
+    if (this.player) this.forceCameraToPlayer();
   }
 
   textureOr(key, fallback) {
@@ -546,9 +582,9 @@ class SerpentLifeScene extends Phaser.Scene {
     this.spawnPickup("skill", this.player.x + 380, this.player.y);
     [80, 148, 248].forEach((offset) => this.spawnPickup("food", this.player.x + offset, this.player.y + Phaser.Math.Between(-22, 22)));
     for (let i = 0; i < 8; i += 1) this.spawnPickup("food");
-    this.spawnEnemy("drifter", { x: this.player.x + 260, y: this.player.y - 96 });
-    this.spawnEnemy("drifter", { x: this.player.x + 210, y: this.player.y + 132 });
-    this.spawnEnemy("hunter", { x: this.player.x + 318, y: this.player.y + 42 });
+    this.spawnEnemy("drifter", { x: this.player.x + 155, y: this.player.y - 76 });
+    this.spawnEnemy("drifter", { x: this.player.x + 138, y: this.player.y + 108 });
+    this.spawnEnemy("hunter", { x: this.player.x + 188, y: this.player.y + 28 });
 
     this.buildHud();
     this.cameraTarget = this.add.zone(this.player.x, this.player.y, 1, 1);
@@ -562,11 +598,12 @@ class SerpentLifeScene extends Phaser.Scene {
 
   forceCameraToPlayer() {
     const cam = this.cameras.main;
-    const maxX = Math.max(0, GAME_CONFIG.arena - cam.width);
-    const maxY = Math.max(0, GAME_CONFIG.arena - cam.height);
+    const view = this.cameraViewSize();
+    const maxX = Math.max(0, GAME_CONFIG.arena - view.width);
+    const maxY = Math.max(0, GAME_CONFIG.arena - view.height);
     cam.setScroll(
-      clamp(this.player.x - cam.width / 2, 0, maxX),
-      clamp(this.player.y - cam.height / 2, 0, maxY),
+      clamp(this.player.x - view.width / 2, 0, maxX),
+      clamp(this.player.y - view.height / 2, 0, maxY),
     );
   }
 
@@ -650,10 +687,12 @@ class SerpentLifeScene extends Phaser.Scene {
   onPointerDown(pointer) {
     this.unlockAudio();
     if (this.mode !== "playing") return;
-    if (pointer.y < 150 || pointer.x > this.scale.width - 76) return;
-    this.pointerState = { id: pointer.id, sx: pointer.x, sy: pointer.y };
-    this.hud?.joyBase?.setPosition(pointer.x, pointer.y).setVisible(true);
-    this.hud?.joyKnob?.setPosition(pointer.x, pointer.y).setVisible(true);
+    const pos = this.pointerPos(pointer);
+    const { width } = this.viewSize();
+    if (pos.y < 150 || pos.x > width - 76) return;
+    this.pointerState = { id: pointer.id, sx: pos.x, sy: pos.y };
+    this.hud?.joyBase?.setPosition(pos.x, pos.y).setVisible(true);
+    this.hud?.joyKnob?.setPosition(pos.x, pos.y).setVisible(true);
     this.updatePointerAngle(pointer);
   }
 
@@ -672,16 +711,17 @@ class SerpentLifeScene extends Phaser.Scene {
 
   updatePointerAngle(pointer) {
     const p = this.pointerState;
-    let dx = pointer.x - p.sx;
-    let dy = pointer.y - p.sy;
+    const pos = this.pointerPos(pointer);
+    let dx = pos.x - p.sx;
+    let dy = pos.y - p.sy;
     let len = Math.hypot(dx, dy);
     if (len <= GAME_CONFIG.inputDeadZone) return;
     if (len > GAME_CONFIG.joystickFollowRadius) {
       const follow = len - GAME_CONFIG.joystickFollowRadius;
       p.sx += (dx / len) * follow;
       p.sy += (dy / len) * follow;
-      dx = pointer.x - p.sx;
-      dy = pointer.y - p.sy;
+      dx = pos.x - p.sx;
+      dy = pos.y - p.sy;
       len = Math.hypot(dx, dy);
       this.hud?.joyBase?.setPosition(p.sx, p.sy);
     }
@@ -2694,9 +2734,9 @@ const config = {
   parent: "game",
   backgroundColor: "#05070b",
   scale: {
-    mode: Phaser.Scale.RESIZE,
-    width: W,
-    height: H,
+    mode: Phaser.Scale.NONE,
+    width: Math.round(window.innerWidth * RENDER_RESOLUTION) || Math.round(W * RENDER_RESOLUTION),
+    height: Math.round(window.innerHeight * RENDER_RESOLUTION) || Math.round(H * RENDER_RESOLUTION),
   },
   render: {
     antialias: true,
