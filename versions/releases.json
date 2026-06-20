@@ -5,7 +5,7 @@
       "id": "v5-fork-roguelike-remix",
       "label": "v5 fork · Roguelike Remix 强化版",
       "sourceCommit": "dbc26db",
-      "deployCommit": "pending",
+      "deployCommit": "f32731b",
       "path": "/serpent-life-mvp/versions/v5-fork-roguelike-remix/",
       "notes": [
         "BGM 改为 CC0 音乐素材主导，程序合成降级为短音效点缀，减少合成味",
