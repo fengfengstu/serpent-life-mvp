@@ -142,53 +142,6 @@ class SerpentLifeScene extends Phaser.Scene {
     g.generateTexture("arena-bg", 768, 768);
 
     g.clear();
-    g.fillStyle(0x10251f, 1);
-    g.fillEllipse(64, 64, 104, 70);
-    g.lineStyle(5, COLORS.gold, 0.92);
-    g.strokeEllipse(64, 64, 96, 60);
-    g.lineStyle(2, COLORS.jade, 0.72);
-    g.strokeEllipse(64, 64, 78, 46);
-    g.fillStyle(0x1a3b2c, 0.92);
-    g.fillEllipse(66, 58, 68, 34);
-    g.fillStyle(COLORS.reward, 0.95);
-    g.fillCircle(45, 56, 5);
-    g.fillCircle(62, 50, 4);
-    g.fillCircle(79, 56, 5);
-    g.generateTexture("v7-snake-head", 128, 128);
-
-    g.clear();
-    g.fillStyle(0x10241f, 1);
-    g.fillEllipse(48, 48, 80, 56);
-    g.lineStyle(4, COLORS.gold, 0.78);
-    g.strokeEllipse(48, 48, 72, 48);
-    g.lineStyle(2, COLORS.jade, 0.58);
-    g.strokeEllipse(48, 48, 52, 32);
-    g.fillStyle(0x244431, 0.82);
-    g.fillEllipse(48, 45, 42, 22);
-    g.generateTexture("v7-snake-body", 96, 96);
-
-    g.clear();
-    g.fillStyle(0x182718, 1);
-    g.fillEllipse(48, 48, 76, 54);
-    g.lineStyle(4, COLORS.reward, 0.88);
-    g.strokeEllipse(48, 48, 68, 46);
-    g.fillStyle(COLORS.reward, 0.86);
-    g.fillCircle(48, 48, 12);
-    g.fillStyle(COLORS.white, 0.72);
-    g.fillCircle(44, 44, 4);
-    g.generateTexture("v7-snake-memory", 96, 96);
-
-    g.clear();
-    g.fillStyle(0x0d211d, 1);
-    g.fillTriangle(10, 48, 86, 18, 86, 78);
-    g.lineStyle(4, COLORS.gold, 0.72);
-    g.strokeTriangle(10, 48, 86, 18, 86, 78);
-    g.lineStyle(2, COLORS.jade, 0.55);
-    g.lineBetween(20, 48, 78, 32);
-    g.lineBetween(20, 48, 78, 64);
-    g.generateTexture("v7-snake-tail", 96, 96);
-
-    g.clear();
     g.fillStyle(COLORS.reward, 1);
     g.fillCircle(32, 32, 16);
     g.lineStyle(3, COLORS.dangerCore, 0.92);
@@ -385,16 +338,16 @@ class SerpentLifeScene extends Phaser.Scene {
     this.showDom("menu");
 
     const { width, height } = this.viewSize();
-    const bg = this.add.tileSprite(width / 2, height / 2, width, height, "arena-bg").setScrollFactor(0);
+    const bg = this.add.image(width / 2, height / 2, "arena-v5").setScrollFactor(0);
     bg.setDisplaySize(width, height).setAlpha(0.92);
     const shade = this.add.rectangle(width / 2, height / 2, width, height, COLORS.ink, 0.22).setScrollFactor(0);
     const halo = this.add.image(width / 2, height * 0.23, "snake-glow").setTint(COLORS.acid).setDisplaySize(260, 180).setAlpha(0.28).setScrollFactor(0);
     halo.setBlendMode(Phaser.BlendModes.ADD);
-    const head = this.add.image(width / 2, height * 0.23, "v7-snake-head").setDisplaySize(92, 92).setScrollFactor(0);
+    const head = this.add.image(width / 2, height * 0.23, "snake-head-v5").setDisplaySize(104, 104).setScrollFactor(0);
     head.setRotation(-0.12);
     const body = [];
     for (let i = 1; i <= 8; i += 1) {
-      const node = this.add.image(width / 2 - i * 23, height * 0.23 + Math.sin(i * 0.75) * 18, i === 8 ? "v7-snake-tail" : i % 4 === 0 ? "v7-snake-memory" : "v7-snake-body");
+      const node = this.add.image(width / 2 - i * 23, height * 0.23 + Math.sin(i * 0.75) * 18, i === 8 ? "snake-tail-v5" : "snake-body-v5");
       node.setDisplaySize(58 - i * 1.4, 58 - i * 1.4).setScrollFactor(0).setRotation(0.18 + i * 0.18);
       body.push(node);
     }
@@ -470,21 +423,23 @@ class SerpentLifeScene extends Phaser.Scene {
     this.shots = [];
     this.frostFields = [];
     this.floaters = [];
+    this.boss = null;
+    this.nextFrostFieldMs = 0;
     this.pointerState = null;
     this.screenShake = 0;
 
-    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-bg");
-    this.bg.setTileScale(1.1, 1.1);
-    this.floorShade = this.add.rectangle(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, COLORS.ink, 0.08);
+    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-v5");
+    this.bg.setTileScale(0.74, 0.74);
+    this.floorShade = this.add.rectangle(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, COLORS.ink, 0.18);
     this.arenaVeil = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-bg");
-    this.arenaVeil.setTileScale(0.36, 0.36).setAlpha(0.26).setBlendMode(Phaser.BlendModes.ADD);
+    this.arenaVeil.setTileScale(0.72, 0.72).setAlpha(0.18).setBlendMode(Phaser.BlendModes.MULTIPLY);
     this.worldLayer.add([this.bg, this.floorShade, this.arenaVeil]);
     this.border = this.add.graphics();
     this.worldLayer.add(this.border);
     this.drawBorder();
 
     this.pickupLayer = this.add.container(0, 0);
-    this.skillLayer = this.add.container(0, 0).setDepth(34);
+    this.skillLayer = this.add.container(0, 0).setDepth(31);
     this.enemyLayer = this.add.container(0, 0);
     this.projectileLayer = this.add.container(0, 0);
     this.worldLayer.add([this.pickupLayer, this.enemyLayer, this.projectileLayer]);
@@ -653,6 +608,35 @@ class SerpentLifeScene extends Phaser.Scene {
     return this.player.trail[trailIndex] ?? this.player;
   }
 
+  segmentNormal(point, side = 1) {
+    const angle = point?.angle ?? this.player?.angle ?? 0;
+    return {
+      x: Math.cos(angle + Math.PI / 2) * side,
+      y: Math.sin(angle + Math.PI / 2) * side,
+    };
+  }
+
+  segmentAnchor(index, side = 1, offset = 18) {
+    const point = this.getSegmentPoint(clamp(index, 0, Math.max(0, this.run.segments - 1)));
+    const normal = this.segmentNormal(point, side);
+    return {
+      x: point.x + normal.x * offset,
+      y: point.y + normal.y * offset,
+      angle: point.angle ?? this.player.angle,
+      normal,
+      point,
+    };
+  }
+
+  lengthScale(min = 1, max = 1.42) {
+    const t = clamp((this.run.segments - GAME_CONFIG.initialSegments) / Math.max(1, GAME_CONFIG.maxSegments - GAME_CONFIG.initialSegments), 0, 1);
+    return min + (max - min) * t;
+  }
+
+  pickupMagnetRadius() {
+    return GAME_CONFIG.magnetRadius + Math.max(0, this.run.segments - GAME_CONFIG.initialSegments) * 2.2;
+  }
+
   updateSpawns(ms) {
     this.run.nextFoodMs -= ms;
     this.run.nextSkillMs -= ms;
@@ -684,7 +668,7 @@ class SerpentLifeScene extends Phaser.Scene {
     const y = clamp(point.y, 80, GAME_CONFIG.arena - 80);
     const aura = this.add.image(x, y, "snake-glow").setTint(COLORS.reward);
     aura.setDisplaySize(type === "skill" ? 112 : 78, type === "skill" ? 112 : 78).setBlendMode(Phaser.BlendModes.ADD).setAlpha(type === "skill" ? 0.36 : 0.22);
-    const sprite = this.add.image(x, y, type === "skill" ? "v7-snake-memory" : "v7-snake-memory").setDisplaySize(type === "skill" ? 52 : 38, type === "skill" ? 52 : 38);
+    const sprite = this.add.image(x, y, type === "skill" ? "vfx-lightning-core-v5" : "snake-memory-v5").setDisplaySize(type === "skill" ? 58 : 42, type === "skill" ? 58 : 42);
     sprite.setTint(type === "skill" ? 0xfff4c4 : 0xffc15a);
     this.tweens.add({ targets: aura, alpha: type === "skill" ? 0.48 : 0.34, duration: 900, yoyo: true, repeat: -1 });
     this.tweens.add({ targets: sprite, angle: 360, duration: type === "skill" ? 4200 : 5600, repeat: -1 });
@@ -696,8 +680,9 @@ class SerpentLifeScene extends Phaser.Scene {
     for (let i = this.pickups.length - 1; i >= 0; i -= 1) {
       const p = this.pickups[i];
       const d = distance(this.player, p);
-      if (d < GAME_CONFIG.magnetRadius) {
-        const pull = clamp((GAME_CONFIG.magnetRadius - d) / GAME_CONFIG.magnetRadius, 0, 1);
+      const magnetRadius = this.pickupMagnetRadius();
+      if (d < magnetRadius) {
+        const pull = clamp((magnetRadius - d) / magnetRadius, 0, 1);
         p.x += (this.player.x - p.x) * pull * dt * 5;
         p.y += (this.player.y - p.y) * pull * dt * 5;
         p.sprite.setPosition(p.x, p.y);
@@ -785,11 +770,11 @@ class SerpentLifeScene extends Phaser.Scene {
     if (skill.id === "fire") {
       for (let s = 0; s < this.run.segments; s += 2) {
         const p = this.getSegmentPoint(s);
-        const radius = 96 + level * 14;
-        this.addSkillPulse(p.x, p.y, "fire", radius * 1.82, COLORS.ember, 0.76, 420);
-        this.addFireEmbers(p.x, p.y, radius, 12 + level * 2);
-        this.addRing(p.x, p.y, radius, COLORS.ember, 0.42);
-        this.damageAround(p.x, p.y, radius, 2.2 + level * 0.4, COLORS.ember);
+        const radius = (88 + level * 12) * this.lengthScale(1, 1.16);
+        this.addSkillPulse(p.x, p.y, "fire", radius * 1.18, COLORS.ember, 0.62, 420);
+        this.addSegmentEmbers(p, radius * 0.72, 10 + level * 2);
+        this.addRing(p.x, p.y, radius * 0.82, COLORS.ember, 0.25);
+        this.damageAround(p.x, p.y, radius, (2.2 + level * 0.4) * this.lengthScale(1, 1.22), COLORS.ember);
       }
       return;
     }
@@ -798,8 +783,10 @@ class SerpentLifeScene extends Phaser.Scene {
         enemy.slowMs = Math.max(enemy.slowMs, 1200);
       });
       this.damageAround(this.player.x, this.player.y, 210, 1.6 + level * 0.3, COLORS.frost);
-      this.addSkillPulse(this.player.x, this.player.y, "frost", 270, COLORS.frost, 0.62, 560);
-      this.addRing(this.player.x, this.player.y, 210, COLORS.frost, 0.32);
+      for (let s = 0; s < Math.min(this.run.segments, 9); s += 2) {
+        const p = this.getSegmentPoint(s);
+        this.addSkillPulse(p.x, p.y, "frost", 104 + level * 14, COLORS.frost, 0.5, 560);
+      }
       return;
     }
     if (skill.id === "turret") {
@@ -807,16 +794,18 @@ class SerpentLifeScene extends Phaser.Scene {
         const point = this.getSegmentPoint(i % this.run.segments);
         const target = this.nearestEnemy(point.x, point.y);
         if (!target) continue;
-        const angle = Phaser.Math.Angle.Between(point.x, point.y, target.x, target.y);
-        const sprite = this.add.image(point.x, point.y, "player-projectile").setDisplaySize(24, 24);
+        const mount = this.segmentAnchor(i % this.run.segments, i % 2 === 0 ? 1 : -1, 20);
+        const angle = Phaser.Math.Angle.Between(mount.x, mount.y, target.x, target.y);
+        this.addMuzzleFlash(mount.x, mount.y, angle, COLORS.playerShot);
+        const sprite = this.add.image(mount.x, mount.y, "player-projectile").setDisplaySize(24, 24);
         this.projectileLayer.add(sprite);
-        this.shots.push({ x: point.x, y: point.y, angle, speed: 430, radius: 10, lifeMs: 1100, damage: 1.8 + level * 0.35, bounces: 1, sprite });
+        this.shots.push({ x: mount.x, y: mount.y, angle, speed: 430, radius: 10, lifeMs: 1100, damage: (1.8 + level * 0.35) * this.lengthScale(1, 1.18), bounces: 1, sprite });
       }
       return;
     }
     if (skill.id === "shield") {
       this.run.invulnMs = Math.max(this.run.invulnMs, 1600 + level * 220);
-      this.addSkillPulse(this.player.x, this.player.y, "shield", 154 + level * 16, COLORS.violet, 0.68, 460);
+      this.addSkillPulse(this.player.x, this.player.y, "shield", 142 + level * 16, COLORS.violet, 0.64, 460);
       this.addRing(this.player.x, this.player.y, 128 + level * 16, COLORS.violet, 0.38);
       this.damageAround(this.player.x, this.player.y, 116 + level * 12, 1.4 + level * 0.25, COLORS.violet);
       return;
@@ -851,7 +840,7 @@ class SerpentLifeScene extends Phaser.Scene {
     const kind = forceKind ?? (roll > 0.86 ? "bloomer" : roll > 0.56 ? "hunter" : "drifter");
     const spec = ENEMY_KINDS[kind];
     const point = forcedPoint ?? randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 500, 780);
-    const texture = kind === "bloomer" ? "enemy-bloomer" : kind === "hunter" ? "enemy-hunter" : "enemy-drifter";
+    const texture = kind === "bloomer" ? "enemy-bloomer-v5" : kind === "hunter" ? "enemy-hunter-v5" : "enemy-drifter-v5";
     const sprite = this.add.sprite(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), texture);
     const baseSize = kind === "bloomer" ? 106 : kind === "hunter" ? 100 : 88;
     sprite.setDisplaySize(baseSize, baseSize);
@@ -933,8 +922,8 @@ class SerpentLifeScene extends Phaser.Scene {
       x: this.player.x + Math.cos(this.player.angle) * 330,
       y: this.player.y + Math.sin(this.player.angle) * 330,
     };
-    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "boss");
-    sprite.setDisplaySize(210, 210);
+    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "boss-core-v5");
+    sprite.setDisplaySize(266, 266);
     const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(COLORS.rose).setDisplaySize(284, 284).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
     this.enemyLayer.add([glow, sprite]);
     this.boss = {
@@ -1038,13 +1027,12 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.nextFireMs -= ms;
     if (this.run.nextFireMs > 0) return;
     this.run.nextFireMs = Math.max(360, 900 - level * 80);
-    const radius = 54 + level * 8 + (this.run.comboHighlights.includes("steam") ? 20 : 0);
-    for (let s = 0; s < this.run.segments; s += Math.max(2, 5 - level)) {
+    const radius = (52 + level * 8 + (this.run.comboHighlights.includes("steam") ? 18 : 0)) * this.lengthScale(1, 1.14);
+    for (let s = 0; s < this.run.segments; s += Math.max(2, 6 - level)) {
       const p = this.getSegmentPoint(s);
-      this.addSkillPulse(p.x, p.y, "fire", radius * 1.65, COLORS.ember, 0.64, 360);
-      this.addFireEmbers(p.x, p.y, radius, 7 + level);
-      this.addRing(p.x, p.y, radius, COLORS.ember, 0.28);
-      this.damageAround(p.x, p.y, radius, 1 + level * 0.35, COLORS.ember);
+      this.addSkillPulse(p.x, p.y, "fire", radius * 1.08, COLORS.ember, 0.48, 330);
+      this.addSegmentEmbers(p, radius * 0.66, 4 + level);
+      this.damageAround(p.x, p.y, radius, (1 + level * 0.35) * this.lengthScale(1, 1.22), COLORS.ember);
     }
   }
 
@@ -1055,26 +1043,40 @@ class SerpentLifeScene extends Phaser.Scene {
     this.nextFrostFieldMs -= ms;
     if (this.nextFrostFieldMs <= 0) {
       this.nextFrostFieldMs = Math.max(160, 360 - level * 30);
-      const sprite = this.add.ellipse(this.player.x, this.player.y, 86 + level * 13, 46 + level * 8, COLORS.frost, 0.13);
-      sprite.setStrokeStyle(3, COLORS.white, 0.22).setBlendMode(Phaser.BlendModes.ADD);
-      sprite.setRotation(this.player.angle + Math.PI / 2);
+      const tail = this.getSegmentPoint(Math.min(this.run.segments - 1, 4 + level * 2)) ?? this.player;
+      const sprite = this.add.graphics();
+      const length = 86 + level * 14;
+      const width = 24 + level * 4;
+      sprite.setPosition(tail.x, tail.y);
+      sprite.setRotation(tail.angle ?? this.player.angle);
+      sprite.setBlendMode(Phaser.BlendModes.ADD);
+      sprite.fillStyle(COLORS.frost, 0.1);
+      sprite.fillRoundedRect(-length / 2, -width / 2, length, width, width / 2);
+      sprite.lineStyle(2, COLORS.white, 0.16);
+      sprite.strokeRoundedRect(-length / 2, -width / 2, length, width, width / 2);
+      sprite.lineStyle(2, COLORS.frost, 0.2);
+      sprite.beginPath();
+      sprite.moveTo(-length * 0.38, 0);
+      sprite.lineTo(length * 0.38, 0);
+      sprite.strokePath();
+      sprite.setAlpha(0.9);
       this.fxLayer.add(sprite);
-      this.frostFields.push({ x: this.player.x, y: this.player.y, radius: 38 + level * 5, lifeMs: 1250 + level * 120, sprite });
+      this.frostFields.push({ x: tail.x, y: tail.y, radius: (34 + level * 5) * this.lengthScale(1, 1.16), lifeMs: 1250 + level * 140, sprite });
     }
     for (let i = this.frostFields.length - 1; i >= 0; i -= 1) {
       const f = this.frostFields[i];
       f.lifeMs -= ms;
-      f.sprite.setAlpha(clamp(f.lifeMs / 1500, 0, 1) * 0.34);
-      f.sprite.rotation += dt * 0.22;
+      f.sprite.setAlpha(clamp(f.lifeMs / 1500, 0, 1) * 0.55);
+      f.sprite.scaleX = 1 + Math.sin(f.lifeMs * 0.018) * 0.035;
       for (let e = this.enemies.length - 1; e >= 0; e -= 1) {
         const enemy = this.enemies[e];
         if (Phaser.Math.Distance.Between(f.x, f.y, enemy.x, enemy.y) < f.radius + enemy.radius) {
           enemy.slowMs = Math.max(enemy.slowMs, 420);
-          this.damageEnemy(e, (0.55 + level * 0.14) * dt, COLORS.frost, "dot");
+          this.damageEnemy(e, (0.55 + level * 0.14) * dt * this.lengthScale(1, 1.16), COLORS.frost, "dot");
         }
       }
       if (this.boss && Phaser.Math.Distance.Between(f.x, f.y, this.boss.x, this.boss.y) < f.radius + this.boss.radius) {
-        this.damageBoss((0.9 + level * 0.18) * dt, COLORS.frost);
+        this.damageBoss((0.9 + level * 0.18) * dt * this.lengthScale(1, 1.16), COLORS.frost);
       }
       if (f.lifeMs <= 0) {
         f.sprite.destroy();
@@ -1091,13 +1093,15 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.nextTurretMs = Math.max(310, 840 - level * 75);
     const count = Math.min(1 + level, Math.ceil(this.run.segments / 5));
     for (let i = 0; i < count; i += 1) {
-      const point = this.getSegmentPoint(1 + i * Math.max(2, Math.floor(this.run.segments / Math.max(1, count))));
-      const target = this.nearestEnemy(point.x, point.y);
+      const index = 1 + i * Math.max(2, Math.floor(this.run.segments / Math.max(1, count)));
+      const mount = this.segmentAnchor(index, i % 2 === 0 ? 1 : -1, 20);
+      const target = this.nearestEnemy(mount.x, mount.y);
       if (!target) continue;
-      const angle = Phaser.Math.Angle.Between(point.x, point.y, target.x, target.y);
-      const sprite = this.add.image(point.x, point.y, "player-projectile").setDisplaySize(22, 22);
+      const angle = Phaser.Math.Angle.Between(mount.x, mount.y, target.x, target.y);
+      this.addMuzzleFlash(mount.x, mount.y, angle, COLORS.playerShot);
+      const sprite = this.add.image(mount.x, mount.y, "player-projectile").setDisplaySize(22, 22);
       this.projectileLayer.add(sprite);
-      this.shots.push({ x: point.x, y: point.y, angle, speed: 380, radius: 9, lifeMs: 950, damage: 1.1 + level * 0.35, bounces: this.run.comboHighlights.includes("rail") ? 2 : 1, sprite });
+      this.shots.push({ x: mount.x, y: mount.y, angle, speed: 380, radius: 9, lifeMs: 950, damage: (1.1 + level * 0.35) * this.lengthScale(1, 1.18), bounces: this.run.comboHighlights.includes("rail") ? 2 : 1, sprite });
     }
   }
 
@@ -1144,14 +1148,12 @@ class SerpentLifeScene extends Phaser.Scene {
     const level = this.run.skills.shield;
     if (!level) return;
     const count = Math.min(5, 1 + level);
-    const radius = 42 + level * 5;
-    const t = this.run.timeMs / 480;
     for (let i = 0; i < count; i += 1) {
-      const a = t + (i / count) * TWO_PI;
-      const x = this.player.x + Math.cos(a) * radius;
-      const y = this.player.y + Math.sin(a) * radius;
+      const anchor = this.segmentAnchor(i, i % 2 === 0 ? 1 : -1, 28 - i * 2);
+      const x = anchor.x;
+      const y = anchor.y;
       this.addSpark(x, y, COLORS.violet, 1, 0.12);
-      this.damageAround(x, y, 24, 0.24 + level * 0.06, COLORS.violet, false);
+      this.damageAround(x, y, 28, 0.24 + level * 0.06, COLORS.violet, false);
     }
   }
 
@@ -1161,7 +1163,10 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.nextLightningMs -= ms;
     if (this.run.nextLightningMs > 0) return;
     this.run.nextLightningMs = Math.max(520, 1200 - level * 90);
-    let origin = this.getSegmentPoint(Math.min(this.run.segments - 1, 2 + Math.floor(Math.random() * Math.max(1, this.run.segments - 2))));
+    const originIndex = Math.min(this.run.segments - 1, 2 + Math.floor(Math.random() * Math.max(1, this.run.segments - 2)));
+    let origin = this.getSegmentPoint(originIndex);
+    const previous = this.getSegmentPoint(Math.max(0, originIndex - 2));
+    if (previous && origin) this.addBolt(previous.x, previous.y, origin.x, origin.y, COLORS.playerShot, 2, 0.42);
     const hit = new Set();
     const jumps = 1 + level + (this.run.comboHighlights.includes("rail") ? 2 : 0);
     for (let j = 0; j < jumps; j += 1) {
@@ -1169,14 +1174,14 @@ class SerpentLifeScene extends Phaser.Scene {
       if (!target) {
         if (this.boss && Phaser.Math.Distance.Between(origin.x, origin.y, this.boss.x, this.boss.y) < 420) {
           this.addBolt(origin.x, origin.y, this.boss.x, this.boss.y, COLORS.playerShot);
-          this.damageBoss(1.4 + level * 0.42, COLORS.playerShot);
+          this.damageBoss((1.4 + level * 0.42) * this.lengthScale(1, 1.18), COLORS.playerShot);
         }
         break;
       }
       hit.add(target);
       this.addBolt(origin.x, origin.y, target.x, target.y, COLORS.playerShot);
       const idx = this.enemies.indexOf(target);
-      this.damageEnemy(idx, 1.2 + level * 0.38, COLORS.playerShot);
+      this.damageEnemy(idx, (1.2 + level * 0.38) * this.lengthScale(1, 1.18), COLORS.playerShot);
       origin = target;
     }
   }
@@ -1185,86 +1190,129 @@ class SerpentLifeScene extends Phaser.Scene {
     if (!this.skillLayer || !this.player || this.mode !== "playing") return;
     this.skillLayer.removeAll(true);
     const t = this.run.timeMs / 1000;
+    const points = [];
+    for (let s = 0; s < Math.min(this.run.segments, 18); s += 1) {
+      const p = this.getSegmentPoint(s);
+      if (p) points.push(p);
+    }
 
     const fireLevel = this.run.skills.fire;
     if (fireLevel > 0) {
-      const step = Math.max(3, 6 - fireLevel);
-      const radius = 54 + fireLevel * 8 + (this.run.comboHighlights.includes("steam") ? 20 : 0);
-      const nodes = [];
-      for (let s = 0; s < this.run.segments; s += step) nodes.push(s);
       const ribbon = this.add.graphics();
       ribbon.setBlendMode(Phaser.BlendModes.ADD);
-      const path = [];
-      for (let s = 0; s < Math.min(this.run.segments, 15); s += 1) {
-        const p = this.getSegmentPoint(s);
-        if (p) path.push(p);
-      }
-      if (path.length > 1) {
-        ribbon.lineStyle(18 + fireLevel * 2, COLORS.ember, 0.12);
+      if (points.length > 1) {
+        ribbon.lineStyle(18 + fireLevel * 2, COLORS.ember, 0.08);
         ribbon.beginPath();
-        ribbon.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i += 1) ribbon.lineTo(path[i].x, path[i].y);
+        ribbon.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) ribbon.lineTo(points[i].x, points[i].y);
         ribbon.strokePath();
-        ribbon.lineStyle(5, COLORS.gold, 0.23);
+        ribbon.lineStyle(5, COLORS.gold, 0.2 + Math.sin(t * 7) * 0.035);
         ribbon.beginPath();
-        ribbon.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i += 1) ribbon.lineTo(path[i].x, path[i].y);
+        ribbon.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) ribbon.lineTo(points[i].x, points[i].y);
         ribbon.strokePath();
       }
       this.skillLayer.add(ribbon);
-      nodes.slice(0, 2 + Math.min(2, fireLevel)).forEach((s) => {
-        const p = this.getSegmentPoint(s);
-        if (!p) return;
-        const ring = this.add.circle(p.x, p.y, radius * 0.32, COLORS.ember, 0.035);
-        ring.setStrokeStyle(5, COLORS.ember, 0.28 + Math.sin(t * 8 + s) * 0.06).setBlendMode(Phaser.BlendModes.ADD);
-        this.skillLayer.add(ring);
-        const core = this.add.circle(p.x, p.y, 8 + fireLevel * 2, COLORS.gold, 0.16);
-        core.setStrokeStyle(2, COLORS.dangerCore, 0.45).setBlendMode(Phaser.BlendModes.ADD);
-        this.skillLayer.add(core);
-      });
+      const step = Math.max(2, 5 - fireLevel);
+      for (let s = 1; s < Math.min(this.run.segments, 13); s += step) {
+        const side = s % 2 === 0 ? 1 : -1;
+        const flame = this.segmentAnchor(s, side, 23);
+        const tongue = this.add.ellipse(flame.x, flame.y, 9 + fireLevel * 2, 22 + fireLevel * 3, s % 3 === 0 ? COLORS.gold : COLORS.ember, 0.32);
+        tongue.setRotation(flame.angle + side * 0.9 + Math.sin(t * 8 + s) * 0.18);
+        tongue.setBlendMode(Phaser.BlendModes.ADD);
+        this.skillLayer.add(tongue);
+      }
+    }
+
+    const frostLevel = this.run.skills.frost;
+    if (frostLevel > 0) {
+      const frost = this.add.graphics();
+      frost.setBlendMode(Phaser.BlendModes.ADD);
+      if (points.length > 2) {
+        frost.lineStyle(12 + frostLevel * 2, COLORS.frost, 0.055);
+        frost.beginPath();
+        frost.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) frost.lineTo(points[i].x, points[i].y);
+        frost.strokePath();
+      }
+      this.skillLayer.add(frost);
+      for (let s = 3; s < Math.min(this.run.segments, 17); s += 3) {
+        const side = s % 2 === 0 ? 1 : -1;
+        const ice = this.segmentAnchor(s, side, 18);
+        const shard = this.add.triangle(ice.x, ice.y, 0, -8, 7, 7, -7, 7, COLORS.frost, 0.34);
+        shard.setRotation(ice.angle + side * 1.2 + Math.sin(t * 6 + s) * 0.14);
+        shard.setBlendMode(Phaser.BlendModes.ADD);
+        this.skillLayer.add(shard);
+      }
     }
 
     const turretLevel = this.run.skills.turret;
     if (turretLevel > 0) {
       const count = Math.min(3 + turretLevel, Math.ceil(this.run.segments / 4));
       for (let i = 0; i < count; i += 1) {
-        const p = this.getSegmentPoint(1 + i * Math.max(2, Math.floor(this.run.segments / Math.max(1, count))));
-        if (!p) continue;
-        const turret = this.add.image(p.x, p.y, "player-projectile");
-        turret.setDisplaySize(22, 22);
-        turret.setRotation(t * 5 + i);
-        turret.setBlendMode(Phaser.BlendModes.ADD);
-        turret.setAlpha(0.86);
-        this.skillLayer.add(turret);
+        const index = 1 + i * Math.max(2, Math.floor(this.run.segments / Math.max(1, count)));
+        const mount = this.segmentAnchor(index, i % 2 === 0 ? 1 : -1, 20);
+        const target = this.nearestEnemy(mount.x, mount.y);
+        const aim = target ? Phaser.Math.Angle.Between(mount.x, mount.y, target.x, target.y) : mount.angle;
+        const base = this.add.circle(mount.x, mount.y, 8 + turretLevel, COLORS.gold, 0.24).setStrokeStyle(2, COLORS.playerShot, 0.38);
+        base.setBlendMode(Phaser.BlendModes.ADD);
+        const barrel = this.add.triangle(
+          mount.x + Math.cos(aim) * 10,
+          mount.y + Math.sin(aim) * 10,
+          13, 0, -8, -5, -8, 5,
+          COLORS.playerShot,
+          0.56,
+        );
+        barrel.setRotation(aim);
+        barrel.setBlendMode(Phaser.BlendModes.ADD);
+        this.skillLayer.add([base, barrel]);
       }
     }
 
     const shieldLevel = this.run.skills.shield;
     if (shieldLevel > 0) {
-      const count = Math.min(5, 1 + shieldLevel);
-      const radius = 44 + shieldLevel * 6;
+      const count = Math.min(6, 2 + shieldLevel);
       for (let i = 0; i < count; i += 1) {
-        const a = t * 2.7 + (i / count) * TWO_PI;
-        const star = this.add.polygon(
-          this.player.x + Math.cos(a) * radius,
-          this.player.y + Math.sin(a) * radius,
-          [0, -13, 5, -4, 14, 0, 5, 4, 0, 13, -5, 4, -14, 0, -5, -4],
-          COLORS.violet,
-          0.42,
-        );
-        star.setRotation(-t * 4.5 + i);
-        star.setBlendMode(Phaser.BlendModes.ADD);
-        star.setAlpha(0.66);
-        this.skillLayer.add(star);
+        const index = Math.min(i, this.run.segments - 1);
+        const side = i % 2 === 0 ? 1 : -1;
+        const plate = this.segmentAnchor(index, side, 28 - Math.min(i, 4) * 2);
+        const piece = this.add.graphics();
+        piece.setPosition(plate.x, plate.y);
+        piece.setRotation(plate.angle + side * 0.28);
+        piece.setBlendMode(Phaser.BlendModes.ADD);
+        piece.lineStyle(4, COLORS.violet, this.run.invulnMs > 0 ? 0.38 : 0.22);
+        piece.beginPath();
+        piece.arc(0, 0, 18 - i * 0.9 + shieldLevel * 2, side > 0 ? -0.95 : Math.PI - 0.95, side > 0 ? 0.95 : Math.PI + 0.95, false);
+        piece.strokePath();
+        piece.lineStyle(1.5, COLORS.white, this.run.invulnMs > 0 ? 0.28 : 0.12);
+        piece.beginPath();
+        piece.arc(0, 0, 12 - i * 0.5 + shieldLevel, side > 0 ? -0.75 : Math.PI - 0.75, side > 0 ? 0.75 : Math.PI + 0.75, false);
+        piece.strokePath();
+        this.skillLayer.add(piece);
       }
     }
 
     const lightningLevel = this.run.skills.lightning;
     if (lightningLevel > 0) {
-      const p = this.getSegmentPoint(Math.min(this.run.segments - 1, 2 + lightningLevel));
-      const core = this.add.circle(p.x, p.y, 11 + lightningLevel * 3, COLORS.playerShot, 0.2);
-      core.setStrokeStyle(3, COLORS.white, 0.34 + Math.sin(t * 11) * 0.08).setBlendMode(Phaser.BlendModes.ADD);
-      this.skillLayer.add(core);
+      const charge = this.add.graphics();
+      charge.setBlendMode(Phaser.BlendModes.ADD);
+      let prev = null;
+      for (let s = 1; s < Math.min(this.run.segments, 14); s += 3) {
+        const p = this.getSegmentPoint(s);
+        if (!p) continue;
+        charge.fillStyle(COLORS.playerShot, 0.2 + Math.sin(t * 12 + s) * 0.06);
+        charge.fillCircle(p.x, p.y, 5 + lightningLevel);
+        if (prev && Math.sin(t * 13 + s) > 0.3) {
+          charge.lineStyle(2, COLORS.playerShot, 0.28);
+          charge.beginPath();
+          charge.moveTo(prev.x, prev.y);
+          charge.lineTo((prev.x + p.x) / 2 + Math.sin(t * 17 + s) * 8, (prev.y + p.y) / 2 + Math.cos(t * 15 + s) * 8);
+          charge.lineTo(p.x, p.y);
+          charge.strokePath();
+        }
+        prev = p;
+      }
+      this.skillLayer.add(charge);
     }
   }
 
@@ -1366,25 +1414,27 @@ class SerpentLifeScene extends Phaser.Scene {
       const glow = this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : isMemory ? COLORS.reward : COLORS.jade);
       glow.setDisplaySize(size * (i === 0 ? 3.9 : 2.65), size * (i === 0 ? 3.9 : 2.65)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.5 : isMemory ? 0.24 : 0.14);
       if (i === 0) {
-        const body = this.add.image(p.x, p.y, "v7-snake-head");
-        body.setRotation(p.angle ?? this.player.angle);
-        body.setDisplaySize(74, 74);
+        const body = this.add.image(p.x, p.y, "snake-head-v5");
+        const headAngle = p.angle ?? this.player.angle;
+        body.setRotation(headAngle);
+        body.setFlipY(Math.cos(headAngle) < -0.08);
+        body.setDisplaySize(82, 82);
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
         this.snakeLayer.add([glow, body]);
       } else {
-        const texture = isTail ? "v7-snake-tail" : isMemory ? "v7-snake-memory" : "v7-snake-body";
-        const displayX = isTail ? 42 + taper * 16 : isMemory ? 36 + taper * 8 : 34 + taper * 9;
-        const displayY = isTail ? 30 + taper * 12 : isMemory ? 36 + taper * 8 : 30 + taper * 8;
+        const texture = isTail ? "snake-tail-v5" : isMemory ? "snake-memory-v5" : "snake-body-v5";
+        const displayX = isTail ? 46 + taper * 16 : isMemory ? 42 + taper * 8 : 38 + taper * 8;
+        const displayY = isTail ? 34 + taper * 12 : isMemory ? 42 + taper * 8 : 38 + taper * 8;
         const body = this.add.image(p.x, p.y, texture);
         body.setDisplaySize(displayX, displayY);
-        body.setRotation((p.angle ?? this.player.angle) + (isTail ? 0 : 0));
+        body.setRotation((p.angle ?? this.player.angle) + (isTail ? 0 : Math.PI / 2));
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
         this.snakeLayer.add([glow, body]);
       }
     }
-    this.snakeLayer.setDepth(10);
+    this.snakeLayer.setDepth(30);
   }
 
   updateHud() {
@@ -1492,16 +1542,96 @@ class SerpentLifeScene extends Phaser.Scene {
     }
   }
 
-  addSkillPulse(x, y, _texture, size, tint, alpha = 0.72, duration = 420) {
+  addSegmentEmbers(point, radius, count = 8) {
+    const angle = point.angle ?? this.player.angle;
+    for (let i = 0; i < count; i += 1) {
+      const side = i % 2 === 0 ? 1 : -1;
+      const normal = this.segmentNormal(point, side);
+      const spread = (Math.random() - 0.5) * 0.75;
+      const startX = point.x + normal.x * (14 + Math.random() * 12);
+      const startY = point.y + normal.y * (14 + Math.random() * 12);
+      const outAngle = angle + side * (Math.PI / 2 + 0.25) + spread;
+      const ember = this.add.image(startX, startY, "spark");
+      ember.setTint(i % 3 === 0 ? COLORS.gold : COLORS.ember);
+      ember.setDisplaySize(7 + Math.random() * 7, 7 + Math.random() * 7);
+      ember.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.64);
+      this.fxLayer.add(ember);
+      this.tweens.add({
+        targets: ember,
+        x: startX + Math.cos(outAngle) * radius * (0.35 + Math.random() * 0.35),
+        y: startY + Math.sin(outAngle) * radius * (0.35 + Math.random() * 0.35),
+        alpha: 0,
+        duration: 240 + Math.random() * 140,
+        ease: "Cubic.out",
+        onComplete: () => ember.destroy(),
+      });
+    }
+  }
+
+  addMuzzleFlash(x, y, angle, color) {
+    const flash = this.add.triangle(x + Math.cos(angle) * 18, y + Math.sin(angle) * 18, 20, 0, -8, -5, -8, 5, color, 0.58);
+    flash.setRotation(angle);
+    flash.setBlendMode(Phaser.BlendModes.ADD);
+    this.fxLayer.add(flash);
+    this.tweens.add({ targets: flash, alpha: 0, scaleX: 1.7, scaleY: 0.65, duration: 120, ease: "Cubic.out", onComplete: () => flash.destroy() });
+  }
+
+  addSkillPulse(x, y, kind, size, tint, alpha = 0.72, duration = 420) {
+    if (this.textures.exists(kind) && !["fire", "frost", "shield"].includes(kind)) {
+      const image = this.add.image(x, y, kind);
+      image.setDisplaySize(size * 0.58, size * 0.58);
+      image.setTint(tint);
+      image.setBlendMode(Phaser.BlendModes.ADD);
+      image.setAlpha(alpha);
+      image.setRotation(Math.random() * TWO_PI);
+      this.fxLayer.add(image);
+      this.tweens.add({
+        targets: image,
+        displayWidth: size,
+        displayHeight: size,
+        angle: image.angle + 96,
+        alpha: 0,
+        duration,
+        ease: "Cubic.out",
+        onComplete: () => image.destroy(),
+      });
+      return;
+    }
+
     const fx = this.add.graphics();
+    fx.setPosition(x, y);
     fx.setBlendMode(Phaser.BlendModes.ADD);
-    fx.lineStyle(5, tint, alpha);
-    fx.strokeCircle(x, y, size * 0.18);
-    fx.lineStyle(2, COLORS.white, alpha * 0.32);
-    fx.strokeCircle(x, y, size * 0.09);
+    if (kind === "fire") {
+      fx.lineStyle(6, tint, alpha);
+      for (let i = 0; i < 4; i += 1) {
+        const start = i * 1.47 + Math.random() * 0.25;
+        fx.beginPath();
+        fx.arc(0, 0, size * (0.14 + i * 0.025), start, start + 0.72, false);
+        fx.strokePath();
+      }
+      fx.fillStyle(COLORS.gold, alpha * 0.22);
+      fx.fillCircle(0, 0, size * 0.08);
+    } else if (kind === "frost") {
+      fx.lineStyle(4, tint, alpha * 0.72);
+      fx.strokeEllipse(0, 0, size * 0.62, size * 0.24);
+      fx.lineStyle(2, COLORS.white, alpha * 0.38);
+      fx.beginPath();
+      fx.moveTo(-size * 0.24, 0);
+      fx.lineTo(size * 0.24, 0);
+      fx.moveTo(0, -size * 0.12);
+      fx.lineTo(0, size * 0.12);
+      fx.strokePath();
+    } else {
+      fx.lineStyle(5, tint, alpha);
+      fx.strokeCircle(0, 0, size * 0.22);
+      fx.lineStyle(2, COLORS.white, alpha * 0.32);
+      fx.strokeCircle(0, 0, size * 0.11);
+    }
     this.fxLayer.add(fx);
     this.tweens.add({
       targets: fx,
+      scaleX: 1.55,
+      scaleY: 1.55,
       alpha: 0,
       duration,
       ease: "Cubic.out",
@@ -1509,14 +1639,17 @@ class SerpentLifeScene extends Phaser.Scene {
     });
   }
 
-  addBolt(x1, y1, x2, y2, color) {
+  addBolt(x1, y1, x2, y2, color, width = 3, alpha = 0.58) {
     const g = this.add.graphics();
-    g.lineStyle(4, color, 0.72);
+    g.lineStyle(width, color, alpha);
     g.beginPath();
     g.moveTo(x1, y1);
-    const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 36;
-    const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 36;
-    g.lineTo(midX, midY);
+    const segments = 4;
+    for (let i = 1; i < segments; i += 1) {
+      const t = i / segments;
+      const jitter = 16 + width * 5;
+      g.lineTo(Phaser.Math.Linear(x1, x2, t) + (Math.random() - 0.5) * jitter, Phaser.Math.Linear(y1, y2, t) + (Math.random() - 0.5) * jitter);
+    }
     g.lineTo(x2, y2);
     g.strokePath();
     this.fxLayer.add(g);
@@ -1688,11 +1821,9 @@ const config = {
     mode: Phaser.Scale.RESIZE,
     width: W,
     height: H,
-    zoom: TEXT_RESOLUTION,
   },
   render: {
     antialias: true,
-    antialiasGL: true,
     pixelArt: false,
     roundPixels: false,
     powerPreference: "high-performance",
