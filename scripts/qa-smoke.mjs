@@ -106,6 +106,7 @@ async function runViewport(browser, viewport) {
       state: scene.audioCtx?.state ?? null,
       hasMusic: !!scene.musicNodes,
       layer: scene.musicDebug?.layer ?? null,
+      hasAssetBgm: !!scene.audioAssets?.bgm,
     };
 
     scene.run.nextEventMs = 0;
@@ -124,15 +125,57 @@ async function runViewport(browser, viewport) {
       segmentsAfter: scene.run.segments,
     };
 
+    const choiceTypes = new Set();
+    for (let i = 0; i < 24; i += 1) {
+      scene.createUpgradeChoices("growth").forEach((choice) => choiceTypes.add(choice.type));
+    }
+    scene.run.segments = 8;
+    scene.updateGrowthStage(scene.player);
+    const growthProbe = {
+      stageAfterEight: scene.run.growthStage,
+      choiceTypes: [...choiceTypes],
+      overloadTypes: scene.createUpgradeChoices("overload").map((choice) => choice.type),
+    };
+    scene.mode = "playing";
+    scene.showDom("playing");
+
+    scene.run.skills.fire = 3;
+    scene.run.nextFireMs = 0;
+    const fxBefore = scene.fxLayer?.length ?? 0;
+    scene.updateFire(1000);
+    const fireProbe = {
+      fxBefore,
+      fxAfter: scene.fxLayer?.length ?? 0,
+    };
+
+    const originalRandom = Math.random;
+    Math.random = () => 0.1;
+    scene.run.timeMs = 20000;
+    scene.run.nextSurpriseMs = 0;
+    scene.run.greedPressure = 9;
+    scene.run.memoryOverflow = 3;
+    const surprisesBefore = scene.run.recentSurprises.length;
+    scene.updateRunSurprises(1);
+    Math.random = originalRandom;
+    const surpriseProbe = {
+      before: surprisesBefore,
+      after: scene.run.recentSurprises.length,
+      nextMs: scene.run.nextSurpriseMs,
+    };
+
     scene.spawnBoss();
     const bossHp0 = scene.boss.hp;
     const weak = scene.bossWeakpoints.find((wp) => wp.active && !wp.broken) ?? scene.bossWeakpoints.find((wp) => !wp.broken);
     scene.damageBoss(12, 0x9af7ff, weak.x, weak.y, "shot");
+    scene.updateHud();
     const bossProbe = {
       shieldAfterWeakHit: scene.boss?.shield ?? 0,
       hpAfterWeakHit: scene.boss?.hp ?? 0,
       weakpoints: scene.bossWeakpoints.length,
       weakHitDamaged: (scene.boss?.hp ?? 0) < bossHp0,
+      hudVisible: !scene.dom.bossBar.classList.contains("ui-hidden"),
+      hudWidth: scene.dom.bossHp.style.width,
+      worldBarExists: !!scene.boss?.hpBar,
     };
 
     scene.endRun("swarmed");
@@ -141,6 +184,9 @@ async function runViewport(browser, viewport) {
       audioBefore,
       eventStarted,
       bodyRisk,
+      growthProbe,
+      fireProbe,
+      surpriseProbe,
       bossProbe,
       retryClean: {
         boss: !!scene.boss,
@@ -235,10 +281,16 @@ for (const result of results) {
     result.first.canvas.width >= result.first.canvas.cssWidth * 2 &&
     result.first.canvas.height >= result.first.canvas.cssHeight * 2;
   if (result.skillVisuals.skillLayerChildren < 5) failures.push(`${result.viewport.name}: skill visuals did not render`);
-  if (!result.gameplayProbe.audioBefore.hasCtx || !result.gameplayProbe.audioBefore.hasMusic) failures.push(`${result.viewport.name}: audio/BGM did not start`);
+  if (!result.gameplayProbe.audioBefore.hasCtx || !result.gameplayProbe.audioBefore.hasMusic || !result.gameplayProbe.audioBefore.hasAssetBgm) failures.push(`${result.viewport.name}: asset audio/BGM did not start`);
   if (!result.gameplayProbe.eventStarted) failures.push(`${result.viewport.name}: wave event did not start`);
   if (result.gameplayProbe.bodyRisk.cracks < 1) failures.push(`${result.viewport.name}: body risk did not add cracks`);
+  if (result.gameplayProbe.growthProbe.stageAfterEight !== "ring") failures.push(`${result.viewport.name}: growth stage did not advance`);
+  if (!result.gameplayProbe.growthProbe.choiceTypes.some((type) => type !== "skill")) failures.push(`${result.viewport.name}: roguelike choices did not include relic/surprise`);
+  if (!result.gameplayProbe.growthProbe.overloadTypes.includes("overload")) failures.push(`${result.viewport.name}: overload choice missing`);
+  if (result.gameplayProbe.fireProbe.fxAfter <= result.gameplayProbe.fireProbe.fxBefore) failures.push(`${result.viewport.name}: fire ring effect did not spawn`);
+  if (result.gameplayProbe.surpriseProbe.after <= result.gameplayProbe.surpriseProbe.before) failures.push(`${result.viewport.name}: director surprise did not trigger`);
   if (result.gameplayProbe.bossProbe.shieldAfterWeakHit >= 3 || !result.gameplayProbe.bossProbe.weakHitDamaged) failures.push(`${result.viewport.name}: boss weakpoint did not register`);
+  if (!result.gameplayProbe.bossProbe.hudVisible || !result.gameplayProbe.bossProbe.worldBarExists) failures.push(`${result.viewport.name}: boss HP bar missing`);
   if (result.gameplayProbe.retryClean.boss || result.gameplayProbe.retryClean.projectiles || result.gameplayProbe.retryClean.shots || result.gameplayProbe.retryClean.frostFields || result.gameplayProbe.retryClean.bodyCracks || result.gameplayProbe.retryClean.currentEvent) {
     failures.push(`${result.viewport.name}: retry retained gameplay state`);
   }

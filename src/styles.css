@@ -23,6 +23,7 @@ canvas {
   display: block;
   width: 100%;
   height: 100%;
+  image-rendering: auto;
 }
 
 #ui-root {
@@ -237,6 +238,48 @@ button {
   background: linear-gradient(90deg, #ffd166, #ff7043, #ff3b4f);
 }
 
+.ui-boss-bar {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  display: grid;
+  grid-template-columns: auto minmax(96px, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 82, 112, 0.38);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(84, 17, 35, 0.58), rgba(8, 9, 13, 0.72));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 0 22px rgba(255, 62, 97, 0.16);
+}
+
+.ui-boss-bar strong {
+  min-width: 0;
+  color: #ffe4ea;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 12px rgba(255, 62, 97, 0.42);
+}
+
+.ui-boss-bar span {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.ui-boss-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffd166, #ff7043, #ff355f);
+  box-shadow: 0 0 16px rgba(255, 73, 104, 0.42);
+}
+
 .ui-icon-button {
   grid-column: 3;
   grid-row: 1;
@@ -322,6 +365,31 @@ button {
 
 .ui-card.is-locked {
   opacity: 0.56;
+}
+
+.ui-card.is-uncommon {
+  border-color: rgba(154, 247, 255, 0.46);
+  background: linear-gradient(180deg, rgba(17, 46, 54, 0.98), rgba(7, 14, 20, 0.98));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.32), inset 0 0 0 1px rgba(154, 247, 255, 0.12);
+}
+
+.ui-card.is-uncommon strong span {
+  background: rgba(154, 247, 255, 0.16);
+  color: #9af7ff;
+}
+
+.ui-card.is-rare {
+  border-color: rgba(255, 209, 102, 0.68);
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 209, 102, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(58, 30, 18, 0.98), rgba(12, 9, 13, 0.98));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36), 0 0 24px rgba(255, 112, 67, 0.18), inset 0 0 0 1px rgba(255, 248, 208, 0.12);
+}
+
+.ui-card.is-rare strong span {
+  background: rgba(255, 209, 102, 0.19);
+  color: #ffd166;
+  text-shadow: 0 0 12px rgba(255, 209, 102, 0.34);
 }
 
 .ui-ending-panel {

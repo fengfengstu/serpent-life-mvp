@@ -33,6 +33,84 @@ export const GAME_CONFIG = {
   settlementHardCapMs: 20000,
 };
 
+export const GROWTH_STAGES = [
+  { id: "hatchling", name: "幼蛇", at: 3, text: "轻快、短小，命门清楚。" },
+  { id: "ring", name: "环蛇", at: 8, text: "身体开始形成战斗半径，磁吸增强。" },
+  { id: "spine", name: "脊蛇", at: 14, text: "技能节点增多，转向压力上升。" },
+  { id: "array", name: "阵蛇", at: 20, text: "身体变成移动阵地，格挡收益变高。" },
+  { id: "final_molt", name: "终蜕", at: 26, text: "记忆接近满载，稀有事件开始出现。" },
+  { id: "overload", name: "贪满", at: 32, text: "身体不再增长，额外记忆会转为过载。" },
+];
+
+export const RELIC_POOL = [
+  {
+    id: "ember_gland",
+    name: "余烬腺体",
+    icon: "烬",
+    text: "火焰光环等级 +1，并让下一次火焰爆发范围更大。",
+    theme: "flame",
+  },
+  {
+    id: "cold_blood",
+    name: "冷血心脏",
+    icon: "寒",
+    text: "冰冻轨迹等级 +1；身体裂痕减少 1。",
+    theme: "frost",
+  },
+  {
+    id: "broken_tail",
+    name: "断尾本能",
+    icon: "尾",
+    text: "立即失去 3 节身体，回复 1 心，获得一次稀有技能核。",
+    theme: "guard",
+  },
+  {
+    id: "magnetic_scales",
+    name: "磁化鳞片",
+    icon: "磁",
+    text: "磁吸范围永久增强，但围猎潮更容易出现。",
+    theme: "tech",
+  },
+  {
+    id: "storm_vertebra",
+    name: "雷脊骨",
+    icon: "脊",
+    text: "闪电链等级 +1，Boss 弱点命中伤害提高。",
+    theme: "voltage",
+  },
+];
+
+export const SURPRISE_EVENTS = [
+  {
+    id: "double_core",
+    name: "双生技能核",
+    icon: "双",
+    text: "连续选择两张技能牌，但身体裂痕 +1。",
+    rarity: "rare",
+  },
+  {
+    id: "greed_gate",
+    name: "贪婪门",
+    icon: "门",
+    text: "立刻生成大量记忆，同时触发一波围猎潮。",
+    rarity: "rare",
+  },
+  {
+    id: "boss_echo",
+    name: "Boss 回声",
+    icon: "影",
+    text: "提前显现一枚 Boss 弱点幻影；击碎后获得过载记忆。",
+    rarity: "rare",
+  },
+  {
+    id: "safe_void",
+    name: "空白安全区",
+    icon: "空",
+    text: "清空附近敌人，但下一次事件更危险。",
+    rarity: "uncommon",
+  },
+];
+
 export const COLORS = {
   ink: 0x05070b,
   abyss: 0x080b0d,

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, ENEMY_KINDS, GAME_CONFIG, LIFE_TEMPLATES, MEMORY_LINES, SKILLS } from "./config.js";
+import { COLORS, ENEMY_KINDS, GAME_CONFIG, GROWTH_STAGES, LIFE_TEMPLATES, MEMORY_LINES, RELIC_POOL, SKILLS, SURPRISE_EVENTS } from "./config.js";
 
 const W = 390;
 const H = 844;
@@ -268,6 +268,10 @@ class SerpentLifeScene extends Phaser.Scene {
         </div>
         <div data-bind="skills" class="ui-skills"></div>
         <div class="ui-progress"><span data-bind="progress"></span></div>
+        <div data-bind="boss-bar" class="ui-boss-bar ui-hidden">
+          <strong data-bind="boss-label">终点 Boss</strong>
+          <span><i data-bind="boss-hp"></i></span>
+        </div>
         <button data-action="pause" class="ui-icon-button" aria-label="暂停">Ⅱ</button>
       </section>
       <section data-screen="upgrade" class="ui-upgrade ui-hidden">
@@ -298,6 +302,9 @@ class SerpentLifeScene extends Phaser.Scene {
     this.dom.meta = this.dom.root.querySelector("[data-bind='meta']");
     this.dom.skills = this.dom.root.querySelector("[data-bind='skills']");
     this.dom.progress = this.dom.root.querySelector("[data-bind='progress']");
+    this.dom.bossBar = this.dom.root.querySelector("[data-bind='boss-bar']");
+    this.dom.bossLabel = this.dom.root.querySelector("[data-bind='boss-label']");
+    this.dom.bossHp = this.dom.root.querySelector("[data-bind='boss-hp']");
     this.dom.cards = this.dom.root.querySelector("[data-bind='upgrade-cards']");
     this.dom.memoryList = this.dom.root.querySelector("[data-bind='memory-list']");
     this.dom.lifeText = this.dom.root.querySelector("[data-bind='life-text']");
@@ -398,9 +405,16 @@ class SerpentLifeScene extends Phaser.Scene {
       nextLightningMs: 0,
       nextBossShotMs: 0,
       nextEventMs: GAME_CONFIG.firstEventMs,
+      nextSurpriseMs: 15000 + Math.random() * 9000,
       eventUntilMs: 0,
       bodyCracks: 0,
       bodyHitCooldownMs: 0,
+      growthStage: GROWTH_STAGES[0].id,
+      memoryOverflow: 0,
+      greedPressure: 0,
+      relics: [],
+      recentSurprises: [],
+      pendingRareCore: 0,
       comboHighlights: [],
       buildSequence: [],
       memoryTokens: [],
@@ -547,6 +561,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.updateShots(dt, ms);
     this.updateSkills(dt, ms);
     this.updateWaveEvent(ms);
+    this.updateRunSurprises(ms);
     this.updateMusicState();
     this.renderSkillAuras();
     this.updateSpawns(ms);
@@ -645,7 +660,8 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   pickupMagnetRadius() {
-    return GAME_CONFIG.magnetRadius + Math.max(0, this.run.segments - GAME_CONFIG.initialSegments) * 2.2;
+    const relicBonus = this.run?.relics?.includes("magnetic_scales") ? 38 : 0;
+    return GAME_CONFIG.magnetRadius + Math.max(0, this.run.segments - GAME_CONFIG.initialSegments) * 2.2 + relicBonus;
   }
 
   updateSpawns(ms) {
@@ -712,6 +728,23 @@ class SerpentLifeScene extends Phaser.Scene {
     }
   }
 
+  updateRunSurprises(ms) {
+    if (!this.run || this.mode !== "playing" || this.run.bossSpawned) return;
+    this.run.nextSurpriseMs -= ms;
+    if (this.run.nextSurpriseMs > 0) return;
+    const pressure = Math.min(8000, this.run.greedPressure * 1200 + this.run.memoryOverflow * 900);
+    this.run.nextSurpriseMs = Math.max(12000, 22000 + Math.random() * 18000 - pressure);
+    if (this.run.timeMs < 12000) return;
+    const chance = 0.38 + Math.min(0.28, this.run.greedPressure * 0.04 + this.run.memoryOverflow * 0.035);
+    if (Math.random() > chance) {
+      this.addMemory("巢穴短暂安静了一瞬。", "event");
+      return;
+    }
+    const event = this.rollSurprise("run");
+    this.applySurprise(event);
+    this.addRing(this.player.x, this.player.y, event.rarity === "rare" ? 300 : 220, event.rarity === "rare" ? COLORS.gold : COLORS.cyan, 0.32);
+  }
+
   spawnPickup(type, forcedX = null, forcedY = null) {
     const point = forcedX === null ? randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 220, 780) : { x: forcedX, y: forcedY };
     const x = clamp(point.x, 80, GAME_CONFIG.arena - 80);
@@ -748,12 +781,19 @@ class SerpentLifeScene extends Phaser.Scene {
   collectFood(index) {
     const p = this.pickups[index];
     this.destroyPickup(index);
-    if (this.run.segments < GAME_CONFIG.maxSegments) this.run.segments += 1;
+    if (this.run.segments < GAME_CONFIG.maxSegments) {
+      this.run.segments += 1;
+    } else {
+      this.run.memoryOverflow += 1;
+      this.run.greedPressure += 1;
+    }
     this.run.score += 10 + this.run.wave * 2;
     this.addMemory(pick(MEMORY_LINES), "food");
     this.addBurst(p.x, p.y, COLORS.reward, 56, 0.24);
-    this.floatText(p.x, p.y, "+1 记忆", COLORS.reward);
+    this.floatText(p.x, p.y, this.run.segments >= GAME_CONFIG.maxSegments ? `过载 +${this.run.memoryOverflow}` : "+1 记忆", COLORS.reward);
     this.playEatSound();
+    this.updateGrowthStage(p);
+    if (this.run.memoryOverflow > 0 && this.run.memoryOverflow % 3 === 0) this.openUpgrade("overload");
   }
 
   collectSkillPickup(index) {
@@ -764,6 +804,25 @@ class SerpentLifeScene extends Phaser.Scene {
     this.openUpgrade();
   }
 
+  currentGrowthStage() {
+    let stage = GROWTH_STAGES[0];
+    for (const candidate of GROWTH_STAGES) {
+      if (this.run.segments >= candidate.at) stage = candidate;
+    }
+    return stage;
+  }
+
+  updateGrowthStage(point = this.player) {
+    const stage = this.currentGrowthStage();
+    if (stage.id === this.run.growthStage) return;
+    this.run.growthStage = stage.id;
+    this.addMemory(`它蜕变为「${stage.name}」：${stage.text}`, "growth");
+    this.floatText(point.x, point.y - 46, `蜕变：${stage.name}`, COLORS.gold);
+    this.addRing(point.x, point.y, 160, COLORS.gold, 0.36);
+    this.playComboSound("growth");
+    if (stage.id !== "overload") this.openUpgrade("growth");
+  }
+
   destroyPickup(index) {
     const p = this.pickups[index];
     this.pickups.splice(index, 1);
@@ -772,21 +831,21 @@ class SerpentLifeScene extends Phaser.Scene {
     p.aura.destroy();
   }
 
-  openUpgrade() {
+  openUpgrade(reason = "skill") {
     this.mode = "upgrade";
     this.showDom("upgrade");
     this.stopCombatMusic(false);
     this.playUpgradeSound();
 
-    const available = SKILLS.filter((skill) => this.run.skills[skill.id] < 5);
-    const choices = Phaser.Utils.Array.Shuffle([...available]).slice(0, 3);
+    const choices = this.createUpgradeChoices(reason);
     if (!this.dom?.cards) return;
     this.dom.cards.innerHTML = "";
-    choices.forEach((skill) => {
-      const current = this.run.skills[skill.id];
+    choices.forEach((choice) => {
+      const current = choice.type === "skill" ? this.run.skills[choice.id] : 0;
       const card = document.createElement("button");
-      card.className = "ui-card is-locked";
-      card.innerHTML = `<strong><span>${skill.icon}</span>${skill.name} Lv.${current + 1}</strong><em>${skill.text}</em>`;
+      card.className = `ui-card is-locked ${choice.rarity ? `is-${choice.rarity}` : ""}`;
+      const suffix = choice.type === "skill" ? ` Lv.${current + 1}` : choice.badge ? ` · ${choice.badge}` : "";
+      card.innerHTML = `<strong><span>${choice.icon}</span>${choice.name}${suffix}</strong><em>${choice.text}</em>`;
       card.disabled = true;
       window.setTimeout(() => {
         card.disabled = false;
@@ -796,10 +855,148 @@ class SerpentLifeScene extends Phaser.Scene {
         event.stopPropagation();
         if (card.disabled) return;
         this.unlockAudio();
-        this.applySkill(skill);
+        this.applyChoice(choice);
       });
       this.dom.cards.appendChild(card);
     });
+  }
+
+  createUpgradeChoices(reason = "skill") {
+    const choices = [];
+    const skillCount = reason === "overload" ? 1 : 2;
+    const skills = Phaser.Utils.Array.Shuffle(SKILLS.filter((skill) => this.run.skills[skill.id] < 5)).slice(0, skillCount);
+    skills.forEach((skill) => choices.push({ ...skill, type: "skill" }));
+
+    if (reason === "overload") {
+      choices.push(
+        { type: "overload", id: "flare", icon: "爆", name: "过载爆燃", badge: "消耗3", rarity: "rare", text: "消耗 3 过载记忆，立刻触发一次全身技能爆发。" },
+        { type: "overload", id: "tailcut", icon: "断", name: "断尾求生", badge: "消耗3", rarity: "rare", text: "消耗 3 过载记忆，失去 4 节身体并回复 1 心。" },
+      );
+      return Phaser.Utils.Array.Shuffle(choices).slice(0, 3);
+    }
+
+    const relicCandidates = RELIC_POOL.filter((relic) => !this.run.relics.includes(relic.id));
+    if (relicCandidates.length && (reason === "growth" || Math.random() < 0.42)) {
+      const relic = pick(relicCandidates);
+      choices.push({ ...relic, type: "relic", rarity: "uncommon" });
+    }
+
+    if (reason === "growth" || this.run.growthStage === "final_molt" || Math.random() < 0.28) {
+      const surprise = this.rollSurprise("card");
+      choices.push({ ...surprise, type: "surprise" });
+    }
+
+    while (choices.length < 3) {
+      const fallback = pick(SKILLS.filter((skill) => this.run.skills[skill.id] < 5));
+      if (!choices.some((choice) => choice.type === "skill" && choice.id === fallback.id)) choices.push({ ...fallback, type: "skill" });
+      else break;
+    }
+    return Phaser.Utils.Array.Shuffle(choices).slice(0, 3);
+  }
+
+  applyChoice(choice) {
+    if (choice.type === "skill") {
+      this.applySkill(choice);
+      return;
+    }
+    if (choice.type === "relic") {
+      this.applyRelic(choice);
+    } else if (choice.type === "surprise") {
+      this.applySurprise(choice);
+    } else if (choice.type === "overload") {
+      this.applyOverloadChoice(choice);
+    }
+    this.mode = "playing";
+    this.showDom("playing");
+    this.startCombatMusic();
+    this.addBurst(this.player.x, this.player.y, COLORS.gold, 140, 0.28);
+    this.playUpgradeSound();
+  }
+
+  rollSurprise(source = "event") {
+    const recent = new Set(this.run.recentSurprises ?? []);
+    const pool = SURPRISE_EVENTS.filter((event) => !recent.has(event.id));
+    const candidates = pool.length ? pool : SURPRISE_EVENTS;
+    const weighted = [];
+    candidates.forEach((event) => {
+      let weight = event.rarity === "rare" ? 2 : 4;
+      if (this.run.growthStage === "final_molt" || this.run.memoryOverflow > 0) weight += 2;
+      if (event.id === "greed_gate" && this.run.coreHp <= 1) weight -= 1;
+      if (event.id === "safe_void" && this.enemies.length > 8) weight += 3;
+      if (source === "card") weight += 1;
+      for (let i = 0; i < Math.max(1, weight); i += 1) weighted.push(event);
+    });
+    return pick(weighted);
+  }
+
+  rememberSurprise(id) {
+    this.run.recentSurprises.push(id);
+    if (this.run.recentSurprises.length > 4) this.run.recentSurprises.shift();
+  }
+
+  applyRelic(relic) {
+    if (this.run.relics.includes(relic.id)) return;
+    this.run.relics.push(relic.id);
+    this.addMemory(`遗物入骨：「${relic.name}」。`, "relic");
+    this.floatText(this.player.x, this.player.y - 54, relic.name, COLORS.gold);
+    if (relic.id === "ember_gland") this.run.skills.fire = Math.min(5, this.run.skills.fire + 1);
+    if (relic.id === "cold_blood") {
+      this.run.skills.frost = Math.min(5, this.run.skills.frost + 1);
+      this.run.bodyCracks = Math.max(0, this.run.bodyCracks - 1);
+    }
+    if (relic.id === "broken_tail") {
+      this.run.segments = Math.max(GAME_CONFIG.initialSegments, this.run.segments - 3);
+      this.run.coreHp = Math.min(GAME_CONFIG.initialCoreHp, this.run.coreHp + 1);
+      this.spawnPickup("skill", this.player.x + 120, this.player.y - 60);
+    }
+    if (relic.id === "magnetic_scales") {
+      this.run.greedPressure += 1;
+      for (let i = 0; i < 4; i += 1) this.spawnPickup("food");
+    }
+    if (relic.id === "storm_vertebra") this.run.skills.lightning = Math.min(5, this.run.skills.lightning + 1);
+    this.checkCombos();
+  }
+
+  applySurprise(event) {
+    this.rememberSurprise(event.id);
+    this.addMemory(`意外发生：「${event.name}」。`, "surprise");
+    this.floatText(this.player.x, this.player.y - 72, event.name, event.rarity === "rare" ? COLORS.dangerCore : COLORS.cyan);
+    if (event.id === "double_core") {
+      this.run.bodyCracks = Math.min(GAME_CONFIG.bodyCrackLimit, this.run.bodyCracks + 1);
+      this.spawnPickup("skill", this.player.x + 120, this.player.y - 80);
+      this.spawnPickup("skill", this.player.x + 170, this.player.y + 80);
+    } else if (event.id === "greed_gate") {
+      for (let i = 0; i < 10; i += 1) this.spawnPickup("food");
+      this.run.currentEvent = { id: "hunt", name: "围猎潮", color: COLORS.rose };
+      this.run.eventUntilMs = GAME_CONFIG.waveEventDurationMs;
+      for (let i = 0; i < 7; i += 1) this.spawnEnemy(i % 2 ? "hunter" : "drifter");
+    } else if (event.id === "boss_echo") {
+      this.run.memoryOverflow += 1;
+      this.addRing(this.player.x, this.player.y, 260, COLORS.rose, 0.36);
+      if (!this.run.bossSpawned && this.run.kills > 20) this.spawnBoss();
+    } else if (event.id === "safe_void") {
+      for (let i = this.enemies.length - 1; i >= 0; i -= 1) {
+        if (Phaser.Math.Distance.Between(this.player.x, this.player.y, this.enemies[i].x, this.enemies[i].y) < 360) this.killEnemy(i, COLORS.cyan);
+      }
+      this.run.greedPressure += 1;
+    }
+    this.playComboSound(event.id);
+  }
+
+  applyOverloadChoice(choice) {
+    if (this.run.memoryOverflow < 3) return;
+    this.run.memoryOverflow -= 3;
+    if (choice.id === "flare") {
+      SKILLS.forEach((skill) => {
+        if (this.run.skills[skill.id] > 0) this.triggerSkillSurge(skill);
+      });
+      this.run.greedPressure += 1;
+    } else if (choice.id === "tailcut") {
+      this.run.segments = Math.max(GAME_CONFIG.initialSegments, this.run.segments - 4);
+      this.run.coreHp = Math.min(GAME_CONFIG.initialCoreHp, this.run.coreHp + 1);
+      this.run.bodyCracks = 0;
+      this.addMemory("它主动断尾，把贪婪换成一次呼吸。", "overload");
+    }
   }
 
   applySkill(skill) {
@@ -824,6 +1021,7 @@ class SerpentLifeScene extends Phaser.Scene {
         const p = this.getSegmentPoint(s);
         const radius = (88 + level * 12) * this.lengthScale(1, 1.16);
         this.addSkillPulse(p.x, p.y, "fire", radius * 1.18, COLORS.ember, 0.62, 420);
+        if (s < 8 || s % 4 === 0) this.addFireRingImage(p.x, p.y, radius * 1.45, level, 0.68);
         this.addSegmentEmbers(p, radius * 0.72, 10 + level * 2);
         this.addRing(p.x, p.y, radius * 0.82, COLORS.ember, 0.25);
         this.damageAround(p.x, p.y, radius, (2.2 + level * 0.4) * this.lengthScale(1, 1.22), COLORS.ember);
@@ -1018,7 +1216,8 @@ class SerpentLifeScene extends Phaser.Scene {
     const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "boss-core-v5");
     sprite.setDisplaySize(266, 266);
     const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(COLORS.rose).setDisplaySize(284, 284).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
-    this.enemyLayer.add([glow, sprite]);
+    const hpBar = this.add.graphics();
+    this.enemyLayer.add([glow, sprite, hpBar]);
     this.boss = {
       x: sprite.x,
       y: sprite.y,
@@ -1028,6 +1227,7 @@ class SerpentLifeScene extends Phaser.Scene {
       speed: 82,
       sprite,
       glow,
+      hpBar,
       phase: 1,
       shield: GAME_CONFIG.bossShieldWeakpoints,
       weakAngle: -Math.PI / 2,
@@ -1036,6 +1236,7 @@ class SerpentLifeScene extends Phaser.Scene {
     };
     this.createBossWeakpoints();
     this.updateBossWeakpoints();
+    this.updateBossHpBar();
     this.addMemory("Boss 从终点巢穴里醒来。", "boss");
     this.floatText(this.player.x, this.player.y - 80, "终点 Boss 醒来", COLORS.rose);
     this.addRing(this.player.x, this.player.y, 270, COLORS.enemyShot, 0.36);
@@ -1073,6 +1274,36 @@ class SerpentLifeScene extends Phaser.Scene {
 
     if (distance(b, this.player) < b.radius + GAME_CONFIG.headRadius) {
       this.damagePlayer("boss");
+    }
+    this.updateBossHpBar();
+  }
+
+  updateBossHpBar() {
+    if (!this.boss?.hpBar) return;
+    const b = this.boss;
+    const pct = clamp(b.hp / b.maxHp, 0, 1);
+    const w = 190;
+    const h = 11;
+    const x = b.x - w / 2;
+    const y = b.y - 124;
+    b.hpBar.clear();
+    b.hpBar.fillStyle(0x05090c, 0.78);
+    b.hpBar.fillRoundedRect(x - 4, y - 4, w + 8, h + 8, 7);
+    b.hpBar.lineStyle(2, COLORS.rose, 0.45);
+    b.hpBar.strokeRoundedRect(x - 4, y - 4, w + 8, h + 8, 7);
+    b.hpBar.fillStyle(COLORS.rose, 0.22);
+    b.hpBar.fillRoundedRect(x, y, w, h, 6);
+    b.hpBar.fillStyle(b.shield > 0 ? COLORS.dangerCore : COLORS.gold, 0.92);
+    b.hpBar.fillRoundedRect(x, y, Math.max(4, w * pct), h, 6);
+    if (b.shield > 0) {
+      const gap = w / GAME_CONFIG.bossShieldWeakpoints;
+      b.hpBar.lineStyle(2, COLORS.white, 0.32);
+      for (let i = 1; i < GAME_CONFIG.bossShieldWeakpoints; i += 1) {
+        b.hpBar.beginPath();
+        b.hpBar.moveTo(x + gap * i, y - 2);
+        b.hpBar.lineTo(x + gap * i, y + h + 2);
+        b.hpBar.strokePath();
+      }
     }
   }
 
@@ -1178,9 +1409,11 @@ class SerpentLifeScene extends Phaser.Scene {
     if (this.run.nextFireMs > 0) return;
     this.run.nextFireMs = Math.max(level >= 5 ? 250 : 320, 900 - level * 88);
     const radius = (52 + level * 8 + (this.run.comboHighlights.includes("steam") ? 18 : 0) + (level >= 3 ? 12 : 0)) * this.lengthScale(1, 1.14);
-    for (let s = 0; s < this.run.segments; s += Math.max(1, 6 - level)) {
+    const step = Math.max(1, 6 - level);
+    for (let s = 0; s < this.run.segments; s += step) {
       const p = this.getSegmentPoint(s);
       this.addSkillPulse(p.x, p.y, "fire", radius * 1.08, COLORS.ember, 0.48, 330);
+      if (s === 0 || s % Math.max(2, step * 2) === 0) this.addFireRingImage(p.x, p.y, radius * 1.36, level, 0.5);
       this.addSegmentEmbers(p, radius * 0.66, 4 + level);
       this.damageAround(p.x, p.y, radius, (1 + level * 0.35 + (level >= 5 ? 0.35 : 0)) * this.lengthScale(1, 1.22), COLORS.ember);
     }
@@ -1378,6 +1611,15 @@ class SerpentLifeScene extends Phaser.Scene {
       for (let s = 1; s < Math.min(this.run.segments, 13); s += step) {
         const side = s % 2 === 0 ? 1 : -1;
         const flame = this.segmentAnchor(s, side, 23);
+        const ring = this.add.graphics();
+        ring.setPosition(flame.point.x, flame.point.y);
+        ring.setRotation(flame.angle + Math.sin(t * 5 + s) * 0.08);
+        ring.setBlendMode(Phaser.BlendModes.ADD);
+        ring.lineStyle(3, COLORS.ember, 0.18 + fireLevel * 0.025);
+        ring.strokeEllipse(0, 0, 58 + fireLevel * 8, 34 + fireLevel * 5);
+        ring.lineStyle(1, COLORS.gold, 0.18);
+        ring.strokeEllipse(0, 0, 38 + fireLevel * 6, 20 + fireLevel * 4);
+        this.skillLayer.add(ring);
         const tongue = this.add.ellipse(flame.x, flame.y, 6 + fireLevel * 1.3, 18 + fireLevel * 2.2, s % 3 === 0 ? COLORS.gold : COLORS.ember, 0.24);
         tongue.setRotation(flame.angle + side * 0.9 + Math.sin(t * 8 + s) * 0.18);
         tongue.setBlendMode(Phaser.BlendModes.ADD);
@@ -1518,6 +1760,7 @@ class SerpentLifeScene extends Phaser.Scene {
       const { x, y } = this.boss;
       this.boss.sprite.destroy();
       this.boss.glow.destroy();
+      this.boss.hpBar?.destroy();
       this.bossWeakpoints.forEach((wp) => wp.sprite?.destroy());
       this.bossWeakpoints = [];
       this.boss = null;
@@ -1630,13 +1873,24 @@ class SerpentLifeScene extends Phaser.Scene {
     const protect = this.run.timeMs < GAME_CONFIG.lethalProtectionMs ? " · 保" : "";
     const cracks = this.run.bodyCracks > 0 ? ` · 裂${this.run.bodyCracks}/${GAME_CONFIG.bodyCrackLimit}` : "";
     const event = this.run.currentEvent ? ` · ${this.run.currentEvent.name}` : "";
-    this.dom.meta.textContent = `${this.run.segments}/${GAME_CONFIG.maxSegments} · ${Math.floor(this.run.timeMs / 1000)}s · ${this.run.kills}杀${cracks}${event}${protect}`;
+    const stage = this.currentGrowthStage();
+    const overload = this.run.memoryOverflow ? ` · 过载${this.run.memoryOverflow}` : "";
+    this.dom.meta.textContent = `${stage.name} ${this.run.segments}/${GAME_CONFIG.maxSegments}${overload} · ${Math.floor(this.run.timeMs / 1000)}s · ${this.run.kills}杀${cracks}${event}${protect}`;
     this.dom.skills.innerHTML = SKILLS.map((skill) => {
       const lv = this.run.skills[skill.id];
       return `<span class="${lv ? "is-on" : ""}">${skill.icon}${lv || ""}</span>`;
     }).join("");
-    const bossPct = this.boss ? clamp(this.boss.hp / this.boss.maxHp, 0, 1) : clamp((this.run.timeMs / GAME_CONFIG.bossSpawnMs), 0, 1);
-    this.dom.progress.style.width = `${Math.round(bossPct * 100)}%`;
+    const awakenPct = this.boss ? 1 : clamp((this.run.timeMs / GAME_CONFIG.bossSpawnMs), 0, 1);
+    this.dom.progress.style.width = `${Math.round(awakenPct * 100)}%`;
+    if (this.dom.bossBar && this.dom.bossHp && this.dom.bossLabel) {
+      const active = !!this.boss;
+      this.dom.bossBar.classList.toggle("ui-hidden", !active);
+      if (active) {
+        const pct = clamp(this.boss.hp / this.boss.maxHp, 0, 1);
+        this.dom.bossHp.style.width = `${Math.round(pct * 100)}%`;
+        this.dom.bossLabel.textContent = `Boss HP ${Math.round(pct * 100)}% · 护盾 ${this.boss.shield}/${GAME_CONFIG.bossShieldWeakpoints}`;
+      }
+    }
   }
 
   updateCamera(ms) {
@@ -1756,6 +2010,28 @@ class SerpentLifeScene extends Phaser.Scene {
     }
   }
 
+  addFireRingImage(x, y, size, level = 1, alpha = 0.55) {
+    if (!this.textures.exists("vfx-fire-ring-v5")) return;
+    const image = this.add.image(x, y, "vfx-fire-ring-v5");
+    const display = size * (level >= 4 ? 1.16 : 1);
+    image.setDisplaySize(display, display);
+    image.setTint(level >= 3 ? COLORS.gold : COLORS.ember);
+    image.setBlendMode(Phaser.BlendModes.ADD);
+    image.setAlpha(alpha);
+    image.setRotation(Math.random() * TWO_PI);
+    this.fxLayer.add(image);
+    this.tweens.add({
+      targets: image,
+      displayWidth: display * 1.34,
+      displayHeight: display * 1.34,
+      angle: image.angle + (Math.random() > 0.5 ? 72 : -72),
+      alpha: 0,
+      duration: 520,
+      ease: "Cubic.out",
+      onComplete: () => image.destroy(),
+    });
+  }
+
   addMuzzleFlash(x, y, angle, color) {
     const flash = this.add.triangle(x + Math.cos(angle) * 18, y + Math.sin(angle) * 18, 20, 0, -8, -5, -8, 5, color, 0.58);
     flash.setRotation(angle);
@@ -1820,15 +2096,17 @@ class SerpentLifeScene extends Phaser.Scene {
     fx.setPosition(x, y);
     fx.setBlendMode(Phaser.BlendModes.ADD);
     if (kind === "fire") {
-      fx.lineStyle(6, tint, alpha);
+      fx.lineStyle(5, tint, alpha * 0.9);
       for (let i = 0; i < 4; i += 1) {
         const start = i * 1.47 + Math.random() * 0.25;
         fx.beginPath();
-        fx.arc(0, 0, size * (0.14 + i * 0.025), start, start + 0.72, false);
+        fx.arc(0, 0, size * (0.34 + i * 0.045), start, start + 0.88, false);
         fx.strokePath();
       }
-      fx.fillStyle(COLORS.gold, alpha * 0.22);
-      fx.fillCircle(0, 0, size * 0.08);
+      fx.lineStyle(2, COLORS.gold, alpha * 0.55);
+      fx.strokeCircle(0, 0, size * 0.43);
+      fx.fillStyle(COLORS.ember, alpha * 0.1);
+      fx.fillCircle(0, 0, size * 0.32);
     } else if (kind === "frost") {
       fx.lineStyle(4, tint, alpha * 0.72);
       fx.strokeEllipse(0, 0, size * 0.62, size * 0.24);
@@ -1908,6 +2186,7 @@ class SerpentLifeScene extends Phaser.Scene {
   unlockAudio() {
     if (this.audioCtx) {
       this.audioCtx.resume?.();
+      this.startBgmAsset();
       return;
     }
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1917,6 +2196,53 @@ class SerpentLifeScene extends Phaser.Scene {
     this.masterGain.gain.value = 0.42;
     this.masterGain.connect(this.audioCtx.destination);
     this.sfxCooldowns ??= new Map();
+    this.loadAudioAssets();
+    this.startBgmAsset();
+  }
+
+  loadAudioAssets() {
+    if (this.audioAssets) return;
+    const make = (src, volume = 0.5, loop = false) => {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.volume = volume;
+      audio.loop = loop;
+      return audio;
+    };
+    this.audioAssets = {
+      bgm: make("assets/free/bgm-empty-city.ogg", 0.16, true),
+      pickup: make("assets/free/sfx-pickup.ogg", 0.46),
+      hit: make("assets/free/sfx-hit.ogg", 0.34),
+      dash: make("assets/free/sfx-dash.ogg", 0.26),
+      level: make("assets/free/sfx-level.ogg", 0.42),
+    };
+  }
+
+  startBgmAsset() {
+    if (!this.audioAssets?.bgm || this.mode === "menu") return;
+    this.audioAssets.bgm.volume = this.boss ? 0.11 : 0.15;
+    this.audioAssets.bgm.play().catch(() => {});
+  }
+
+  updateBgmAssetState() {
+    if (!this.audioAssets?.bgm) return;
+    const lowHp = (this.run?.coreHp ?? GAME_CONFIG.initialCoreHp) <= 1;
+    const pressure = clamp((this.enemies?.length ?? 0) / 18 + (this.boss ? 0.45 : 0) + (lowHp ? 0.28 : 0) + (this.run?.memoryOverflow ?? 0) * 0.04, 0, 1.25);
+    this.audioAssets.bgm.volume = 0.12 + pressure * 0.045;
+    this.audioAssets.bgm.playbackRate = this.boss ? 1.035 : 1 + Math.min(0.025, pressure * 0.015);
+  }
+
+  stopBgmAsset() {
+    if (!this.audioAssets?.bgm) return;
+    this.audioAssets.bgm.pause();
+  }
+
+  playAssetSfx(id, volume = null) {
+    const src = this.audioAssets?.[id];
+    if (!src) return;
+    const audio = src.cloneNode();
+    audio.volume = volume ?? src.volume;
+    audio.play().catch(() => {});
   }
 
   tone(freq, duration = 0.08, type = "sine", gain = 0.05, delay = 0, destination = null) {
@@ -1968,48 +2294,11 @@ class SerpentLifeScene extends Phaser.Scene {
 
   startCombatMusic() {
     this.unlockAudio();
-    if (!this.audioCtx || this.musicNodes) return;
-    this.musicStep = 0;
-    const bass = this.audioCtx.createOscillator();
-    const pulse = this.audioCtx.createOscillator();
-    const shimmer = this.audioCtx.createOscillator();
-    const danger = this.audioCtx.createOscillator();
-    const filter = this.audioCtx.createBiquadFilter();
-    const gain = this.audioCtx.createGain();
-    const shimmerGain = this.audioCtx.createGain();
-    const dangerGain = this.audioCtx.createGain();
-    const drumGain = this.audioCtx.createGain();
-    bass.type = "triangle";
-    pulse.type = "square";
-    shimmer.type = "sine";
-    danger.type = "sawtooth";
-    bass.frequency.value = 55;
-    pulse.frequency.value = 110;
-    shimmer.frequency.value = 220;
-    danger.frequency.value = 73.42;
-    filter.type = "lowpass";
-    filter.frequency.value = 420;
-    filter.Q.value = 0.8;
-    gain.gain.value = 0.015;
-    shimmerGain.gain.value = 0.004;
-    dangerGain.gain.value = 0.0001;
-    drumGain.gain.value = 0.7;
-    bass.connect(filter);
-    pulse.connect(filter);
-    filter.connect(gain);
-    shimmer.connect(shimmerGain);
-    danger.connect(dangerGain);
-    shimmerGain.connect(gain);
-    dangerGain.connect(gain);
-    gain.connect(this.masterGain);
-    bass.start();
-    pulse.start();
-    shimmer.start();
-    danger.start();
-    const melody = [0, 7, 3, 10, 0, 12, 10, 7, -2, 5, 3, 7];
-    const timer = window.setInterval(() => this.tickCombatMusic(melody), 420);
-    this.musicNodes = { bass, pulse, shimmer, danger, filter, gain, shimmerGain, dangerGain, drumGain, timer };
-    this.musicDebug = { active: true, ticks: 0, layer: "base" };
+    if (this.musicNodes) return;
+    this.startBgmAsset();
+    const timer = window.setInterval(() => this.updateBgmAssetState(), 700);
+    this.musicNodes = { assetOnly: true, timer };
+    this.musicDebug = { active: true, ticks: 0, layer: "asset-bgm" };
   }
 
   tickCombatMusic(melody) {
@@ -2040,7 +2329,17 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   stopCombatMusic(fade = true) {
-    if (!this.musicNodes || !this.audioCtx) return;
+    if (this.musicNodes?.assetOnly) {
+      window.clearInterval(this.musicNodes.timer);
+      this.musicNodes = null;
+      this.musicDebug = { active: false, ticks: this.musicDebug?.ticks ?? 0, layer: "stopped" };
+      if (fade) this.stopBgmAsset();
+      return;
+    }
+    if (!this.musicNodes || !this.audioCtx) {
+      if (fade) this.stopBgmAsset();
+      return;
+    }
     const { bass, pulse, shimmer, danger, gain, timer } = this.musicNodes;
     window.clearInterval(timer);
     const now = this.audioCtx.currentTime;
@@ -2053,6 +2352,7 @@ class SerpentLifeScene extends Phaser.Scene {
     danger.stop(now + (fade ? 0.38 : 0.08));
     this.musicNodes = null;
     this.musicDebug = { active: false, ticks: this.musicDebug?.ticks ?? 0, layer: "stopped" };
+    if (fade) this.stopBgmAsset();
   }
 
   updateMusicState() {
@@ -2062,6 +2362,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
   playEatSound() {
     this.playSfx("eat", 55, () => {
+      this.playAssetSfx("pickup", 0.42);
       this.tone(520, 0.055, "sine", 0.028);
       this.tone(760, 0.075, "triangle", 0.021, 0.04);
       this.tone(1040, 0.05, "sine", 0.012, 0.075);
@@ -2070,6 +2371,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
   playUpgradeSound() {
     this.playSfx("upgrade", 260, () => {
+      this.playAssetSfx("level", 0.38);
       [330, 550, 880, 1320].forEach((freq, i) => this.tone(freq, 0.1, "triangle", 0.026, i * 0.045));
       this.noiseBurst(0.12, 0.018, 0.05, "highpass", 1400);
     });
@@ -2077,6 +2379,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
   playHitSound() {
     this.playSfx("enemy-hit", 90, () => {
+      this.playAssetSfx("hit", 0.26);
       this.tone(185, 0.045, "square", 0.014);
       this.noiseBurst(0.035, 0.012, 0, "bandpass", 620);
     });
@@ -2084,6 +2387,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
   playHurtSound() {
     this.playSfx("player-hurt", 260, () => {
+      this.playAssetSfx("hit", 0.38);
       this.tone(150, 0.16, "sawtooth", 0.045);
       this.tone(92, 0.22, "triangle", 0.025, 0.04);
       this.noiseBurst(0.11, 0.022, 0.02, "lowpass", 260);
@@ -2109,6 +2413,7 @@ class SerpentLifeScene extends Phaser.Scene {
         [660, 990, 1320].forEach((freq, i) => this.tone(freq, 0.11, "sine", 0.014, i * 0.035));
         this.noiseBurst(0.12, 0.012, 0.02, "highpass", 1800);
       } else if (id === "turret") {
+        this.playAssetSfx("dash", 0.22);
         this.tone(260, 0.045, "square", 0.02);
         this.tone(520, 0.035, "triangle", 0.014, 0.035);
       } else if (id === "shield") {
@@ -2144,6 +2449,7 @@ class SerpentLifeScene extends Phaser.Scene {
   playBodyBlockSound(guarded) {
     this.playSfx(guarded ? "body-guard" : "body-crack", 160, () => {
       this.tone(guarded ? 330 : 180, 0.055, guarded ? "triangle" : "sawtooth", guarded ? 0.018 : 0.024);
+      this.playAssetSfx(guarded ? "level" : "hit", guarded ? 0.2 : 0.24);
       this.noiseBurst(0.055, 0.014, 0, "bandpass", guarded ? 1200 : 520);
     });
   }
@@ -2182,8 +2488,10 @@ const config = {
   },
   render: {
     antialias: true,
+    antialiasGL: true,
     pixelArt: false,
     roundPixels: false,
+    resolution: TEXT_RESOLUTION,
     powerPreference: "high-performance",
   },
   resolution: TEXT_RESOLUTION,
