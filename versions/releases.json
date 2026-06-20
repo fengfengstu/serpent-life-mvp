@@ -1,6 +1,20 @@
 {
-  "latest": "v6-defold-formal",
+  "latest": "v5-fork-remaster",
   "releases": [
+    {
+      "id": "v5-fork-remaster",
+      "label": "v5 fork · 分叉重制正式版",
+      "sourceCommit": "db530de",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v5-fork-remaster/",
+      "notes": [
+        "退回 V5 Phaser 玩法、触控与 UI 底座，不继承 V6 Defold 和 V7 Canvas 试验问题",
+        "移除 V7 程序化蛇污染，恢复 V5 高清蛇、敌人、Boss 与竞技场资产",
+        "火焰、冰冻、炮台、护盾、闪电改为沿蛇身、尾迹、节点挂载的视觉语言，避免整张 PNG 硬贴",
+        "长度成长影响技能强度、磁吸和转向压力，不再只是 HUD 数字",
+        "Boss 可被技能稳定伤害，重开会清空 Boss 与弹幕，蛇头左右朝向做镜像修正"
+      ]
+    },
     {
       "id": "v6-defold-formal",
       "label": "v6 formal · Defold 正式测试版",
