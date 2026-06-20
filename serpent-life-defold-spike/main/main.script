@@ -32,8 +32,8 @@ local function id_url(id)
 	return "/" .. id
 end
 
-local function place(id, x, y, scale, angle)
-	go.set_position(vmath.vector3(x, y, 0), id_url(id))
+local function place(id, x, y, scale, angle, z)
+	go.set_position(vmath.vector3(x, y, z or 0), id_url(id))
 	go.set_scale(vmath.vector3(scale, scale, 1), id_url(id))
 	if angle then
 		go.set_rotation(vmath.quat_rotation_z(angle), id_url(id))
@@ -83,6 +83,33 @@ local function hide_boss(self)
 	for _, b in ipairs(self.boss_bullets or {}) do
 		b.on = false
 		hide(b.id)
+	end
+end
+
+local function update_drag(self, x, y)
+	if not self.drag then return end
+	local d = self.drag
+	local dx = x - d.base_x
+	local dy = y - d.base_y
+	local len = math.sqrt(dx * dx + dy * dy)
+	if len > 72 then
+		local follow = len - 72
+		d.base_x = d.base_x + dx / len * follow
+		d.base_y = d.base_y + dy / len * follow
+		dx = x - d.base_x
+		dy = y - d.base_y
+		len = math.sqrt(dx * dx + dy * dy)
+	end
+	if len > 5 then
+		self.player.target = math.atan2(dy, dx)
+	end
+	local cap = math.min(48, len)
+	if len > 0 then
+		d.knob_x = d.base_x + dx / len * cap
+		d.knob_y = d.base_y + dy / len * cap
+	else
+		d.knob_x = d.base_x
+		d.knob_y = d.base_y
 	end
 end
 
@@ -229,7 +256,7 @@ end
 function init(self)
 	math.randomseed(os.time())
 	msg.post(".", "acquire_input_focus")
-	place("bg", W * 0.5, H * 0.5, 0.43, 0)
+	place("bg", W * 0.5, H * 0.5, 0.43, 0, -0.9)
 	place("shield", -500, -500, 0.001, 0)
 	place("lightning", -500, -500, 0.001, 0)
 	restart(self)
@@ -437,29 +464,23 @@ function on_input(self, action_id, action)
 	if action_id == hash("touch") then
 		if action.pressed then
 			if self.mode == "dead" then restart(self) return end
-			self.drag = { x = action.x, y = action.y }
+			self.drag = { base_x = action.x, base_y = action.y, knob_x = action.x, knob_y = action.y }
+			update_drag(self, action.x, action.y)
 		elseif action.released then
 			self.drag = nil
 		elseif self.drag then
-			local dx = action.x - self.drag.x
-			local dy = action.y - self.drag.y
-			if math.sqrt(dx * dx + dy * dy) > 5 then
-				self.player.target = math.atan2(dy, dx)
-			end
+			update_drag(self, action.x, action.y)
 		end
 	elseif action_id == hash("multitouch") and action.touch and #action.touch > 0 then
 		local t = action.touch[1]
 		if t.pressed then
 			if self.mode == "dead" then restart(self) return end
-			self.drag = { x = t.x, y = t.y }
+			self.drag = { base_x = t.x, base_y = t.y, knob_x = t.x, knob_y = t.y }
+			update_drag(self, t.x, t.y)
 		elseif t.released then
 			self.drag = nil
 		elseif self.drag then
-			local dx = t.x - self.drag.x
-			local dy = t.y - self.drag.y
-			if math.sqrt(dx * dx + dy * dy) > 5 then
-				self.player.target = math.atan2(dy, dx)
-			end
+			update_drag(self, t.x, t.y)
 		end
 	elseif action.pressed or action.repeated then
 		if action_id == hash("up") then self.player.target = math.pi * 0.5 end
