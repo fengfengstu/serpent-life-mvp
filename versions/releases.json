@@ -4,15 +4,16 @@
     {
       "id": "v9-1-european-fantasy-hidpi",
       "label": "v9.1 · 欧洲奇幻高清渲染版",
-      "sourceCommit": "ea6ada4",
-      "deployCommit": "0d174f7",
+      "sourceCommit": "6287cb3",
+      "deployCommit": "pending",
       "path": "/serpent-life-mvp/versions/v9-1-european-fantasy-hidpi/",
       "notes": [
         "在 V9 欧洲奇幻 / 羊皮纸战棋风格基础上新增真正 2x high-DPI WebGL 后备画布，减少手机端锯齿和压缩感",
         "保留原来的逻辑视野、触控手感和 UI 尺寸，内部渲染分辨率提升但外部布局不变",
         "修正触控输入坐标映射，使浮动摇杆在高清画布下仍然跟手",
         "开局敌人位置前移，保证小屏首屏能看到威胁，不再只露出贴边碎片",
-        "烟测改为读取 Phaser 相机真实 worldView，并把 high-DPI backing store 作为硬性验收项"
+        "烟测改为读取 Phaser 相机真实 worldView，并把 high-DPI backing store 作为硬性验收项",
+        "移除 V3/V4/remaster 历史素材预加载，部署包精简到约 15MB，降低外网加载和 GitHub Pages 构建压力"
       ]
     },
     {
