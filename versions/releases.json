@@ -1,6 +1,18 @@
 {
-  "latest": "v2-color-semantics",
+  "latest": "v3-phaser-art-pass",
   "releases": [
+    {
+      "id": "v3-phaser-art-pass",
+      "label": "v3 · Phaser 主角与竞技场美术版",
+      "sourceCommit": "f30b301",
+      "deployCommit": "17b5993",
+      "path": "/serpent-life-mvp/versions/v3-phaser-art-pass/",
+      "notes": [
+        "主角蛇替换为模块化透明资产",
+        "战斗背景升级为暗金档案竞技场",
+        "烟测新增 V3 蛇与竞技场纹理检查"
+      ]
+    },
     {
       "id": "v2-color-semantics",
       "label": "v2 · 战斗识别分色版",
