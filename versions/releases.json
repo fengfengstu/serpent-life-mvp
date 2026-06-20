@@ -1,6 +1,22 @@
 {
-  "latest": "v5-fork-remaster",
+  "latest": "v5-fork-audio-gameplay",
   "releases": [
+    {
+      "id": "v5-fork-audio-gameplay",
+      "label": "v5 fork · 声音与玩法重制版",
+      "sourceCommit": "b815211",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v5-fork-audio-gameplay/",
+      "notes": [
+        "新增动态分层 BGM：基础、事件、Boss、低血量与身体裂痕压力共同影响音乐层",
+        "新增拾取、升级、技能、Combo、波次事件、身体格挡、Boss 出场、弱点命中的代码合成音效",
+        "新增身体裂痕系统：身体可挡怪和弹幕，但会积累裂痕；护盾/铁壁蛇阵可把风险转成收益",
+        "新增波次事件：记忆雨、围猎潮、共鸣裂隙，让局内节奏不再只是刷怪变多",
+        "新增 Boss 弱点破盾：三枚弱点需要被击破，破盾前普通伤害削弱，弱点命中有硬直与强反馈",
+        "强化 Combo 实效：蒸汽增幅火冰，雷炮追加电弧，铁壁强化身体格挡",
+        "收细火焰、冰霜、护盾、电弧的程序绘制线条，减少粗糙 SVG 感"
+      ]
+    },
     {
       "id": "v5-fork-remaster",
       "label": "v5 fork · 分叉重制正式版",
