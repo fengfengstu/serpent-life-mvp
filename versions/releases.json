@@ -5,7 +5,7 @@
       "id": "v5-fork-remaster",
       "label": "v5 fork · 分叉重制正式版",
       "sourceCommit": "db530de",
-      "deployCommit": "pending",
+      "deployCommit": "5ec50c3",
       "path": "/serpent-life-mvp/versions/v5-fork-remaster/",
       "notes": [
         "退回 V5 Phaser 玩法、触控与 UI 底座，不继承 V6 Defold 和 V7 Canvas 试验问题",
