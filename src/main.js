@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, ENEMY_KINDS, GAME_CONFIG, GROWTH_STAGES, LIFE_TEMPLATES, MEMORY_LINES, RELIC_POOL, SKILLS, SURPRISE_EVENTS } from "./config.js";
+import { BOSS_STAGES, CHAPTERS, COLORS, ELITE_EVENTS, ENEMY_KINDS, GAME_CONFIG, GROWTH_STAGES, LIFE_TEMPLATES, MEMORY_LINES, RELIC_POOL, SKILLS, SURPRISE_EVENTS } from "./config.js";
 
 const W = 390;
 const H = 844;
@@ -91,6 +91,29 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("enemy-hunter-v5", "enemy-hunter-v5.png");
     this.load.image("enemy-bloomer-v5", "enemy-bloomer-v5.png");
     this.load.image("boss-core-v5", "boss-core-v5.png");
+    this.load.setPath("assets/generated/v9-euro/arena");
+    this.load.image("arena-v9", "floor.png");
+    this.load.setPath("assets/generated/v9-euro/serpent");
+    this.load.image("snake-head-v9", "head.png");
+    this.load.image("snake-body-v9", "body.png");
+    this.load.image("snake-memory-v9", "memory.png");
+    this.load.image("snake-tail-v9", "tail.png");
+    this.load.setPath("assets/generated/v9-euro/enemies");
+    this.load.image("enemy-drifter-v9", "drifter.png");
+    this.load.image("enemy-hunter-v9", "hunter.png");
+    this.load.image("enemy-bloomer-v9", "bloomer.png");
+    this.load.image("enemy-sentinel-v9", "sentinel.png");
+    this.load.setPath("assets/generated/v9-euro/bosses");
+    this.load.image("boss-warden-v9", "warden.png");
+    this.load.image("boss-crimson-v9", "crimson.png");
+    this.load.image("boss-archivist-v9", "archivist.png");
+    this.load.setPath("assets/generated/v9-euro/pickups");
+    this.load.image("pickup-memory-v9", "memory.png");
+    this.load.image("pickup-skill-v9", "skill-core.png");
+    this.load.setPath("assets/generated/v9-euro/skills");
+    SKILLS.forEach((skill) => this.load.image(`skill-icon-${skill.id}-v9`, `${skill.id}.png`));
+    this.load.setPath("assets/generated/v9-euro/ui");
+    this.load.image("ui-panel-v9", "panel-9slice.png");
   }
 
   create() {
@@ -267,6 +290,7 @@ class SerpentLifeScene extends Phaser.Scene {
       </section>
       <section data-screen="hud" class="ui-hud ui-hidden">
         <div class="ui-hud-main">
+          <div data-bind="chapter" class="ui-chapter">一章：孵梦回廊</div>
           <div data-bind="hearts" class="ui-hearts">♥♥♥</div>
           <div data-bind="meta" class="ui-meta">长度 3 · 0s</div>
         </div>
@@ -303,6 +327,7 @@ class SerpentLifeScene extends Phaser.Scene {
     `;
     this.dom.screens = [...this.dom.root.querySelectorAll("[data-screen]")];
     this.dom.hearts = this.dom.root.querySelector("[data-bind='hearts']");
+    this.dom.chapter = this.dom.root.querySelector("[data-bind='chapter']");
     this.dom.meta = this.dom.root.querySelector("[data-bind='meta']");
     this.dom.skills = this.dom.root.querySelector("[data-bind='skills']");
     this.dom.progress = this.dom.root.querySelector("[data-bind='progress']");
@@ -349,16 +374,16 @@ class SerpentLifeScene extends Phaser.Scene {
     this.showDom("menu");
 
     const { width, height } = this.viewSize();
-    const bg = this.add.image(width / 2, height / 2, "arena-v5").setScrollFactor(0);
+    const bg = this.add.image(width / 2, height / 2, this.textureOr("arena-v9", "arena-v5")).setScrollFactor(0);
     bg.setDisplaySize(width, height).setAlpha(0.92);
     const shade = this.add.rectangle(width / 2, height / 2, width, height, COLORS.ink, 0.22).setScrollFactor(0);
     const halo = this.add.image(width / 2, height * 0.23, "snake-glow").setTint(COLORS.acid).setDisplaySize(260, 180).setAlpha(0.28).setScrollFactor(0);
     halo.setBlendMode(Phaser.BlendModes.ADD);
-    const head = this.add.image(width / 2, height * 0.23, "snake-head-v5").setDisplaySize(104, 104).setScrollFactor(0);
+    const head = this.add.image(width / 2, height * 0.23, this.textureOr("snake-head-v9", "snake-head-v5")).setDisplaySize(116, 116).setScrollFactor(0);
     head.setRotation(-0.12);
     const body = [];
     for (let i = 1; i <= 8; i += 1) {
-      const node = this.add.image(width / 2 - i * 23, height * 0.23 + Math.sin(i * 0.75) * 18, i === 8 ? "snake-tail-v5" : "snake-body-v5");
+      const node = this.add.image(width / 2 - i * 23, height * 0.23 + Math.sin(i * 0.75) * 18, i === 8 ? this.textureOr("snake-tail-v9", "snake-tail-v5") : this.textureOr("snake-body-v9", "snake-body-v5"));
       node.setDisplaySize(58 - i * 1.4, 58 - i * 1.4).setScrollFactor(0).setRotation(0.18 + i * 0.18);
       body.push(node);
     }
@@ -368,6 +393,48 @@ class SerpentLifeScene extends Phaser.Scene {
 
   viewSize() {
     return { width: this.scale.width, height: this.scale.height };
+  }
+
+  textureOr(key, fallback) {
+    return this.textures.exists(key) ? key : fallback;
+  }
+
+  chapterForTime(timeMs = this.run?.timeMs ?? 0) {
+    let chapter = CHAPTERS[0];
+    let index = 0;
+    CHAPTERS.forEach((candidate, i) => {
+      if (timeMs >= candidate.startMs) {
+        chapter = candidate;
+        index = i;
+      }
+    });
+    return { ...chapter, index };
+  }
+
+  updateChapterState() {
+    if (!this.run) return this.chapterForTime(0);
+    const chapter = this.chapterForTime();
+    if (chapter.index !== this.run.chapterIndex) {
+      this.run.chapterIndex = chapter.index;
+      this.addMemory(`进入「${chapter.name}」：${chapter.text}`, "chapter");
+      this.floatText(this.player.x, this.player.y - 96, chapter.name, chapter.color);
+      this.addRing(this.player.x, this.player.y, 280, chapter.color, 0.32);
+      this.screenShake = Math.max(this.screenShake, 6);
+      this.playComboSound("growth");
+    }
+    return chapter;
+  }
+
+  nextBossSpec() {
+    if (!this.run) return null;
+    return BOSS_STAGES.find((spec) => !this.run.clearedBosses.includes(spec.id)) ?? null;
+  }
+
+  bossProgress(spec = this.nextBossSpec()) {
+    if (!spec) return 1;
+    const timePct = spec.spawnMs ? this.run.timeMs / spec.spawnMs : 0;
+    const killPct = spec.spawnKills ? this.run.kills / spec.spawnKills : 0;
+    return clamp(Math.max(timePct, killPct), 0, 1);
   }
 
   clearGameObjects() {
@@ -398,6 +465,10 @@ class SerpentLifeScene extends Phaser.Scene {
       score: 0,
       kills: 0,
       wave: 1,
+      chapterIndex: 0,
+      clearedBosses: [],
+      activeBossId: null,
+      nextEliteMs: 64000,
       invulnMs: 900,
       bossSpawned: false,
       bossDefeated: false,
@@ -423,6 +494,7 @@ class SerpentLifeScene extends Phaser.Scene {
       buildSequence: [],
       memoryTokens: [],
       currentEvent: null,
+      currentElite: null,
       skills: {},
       selectedSlots: [],
       deathCause: "default",
@@ -453,8 +525,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.pointerState = null;
     this.screenShake = 0;
 
-    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-v5");
-    this.bg.setTileScale(0.74, 0.74);
+    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, this.textureOr("arena-v9", "arena-v5"));
+    this.bg.setTileScale(this.textures.exists("arena-v9") ? 0.26 : 0.74, this.textures.exists("arena-v9") ? 0.26 : 0.74);
     this.floorShade = this.add.rectangle(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, COLORS.ink, 0.18);
     this.arenaVeil = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-bg");
     this.arenaVeil.setTileScale(0.72, 0.72).setAlpha(0.18).setBlendMode(Phaser.BlendModes.MULTIPLY);
@@ -555,6 +627,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.invulnMs = Math.max(0, this.run.invulnMs - ms);
     this.run.bodyHitCooldownMs = Math.max(0, this.run.bodyHitCooldownMs - ms);
     this.player.hurtMs = Math.max(0, this.player.hurtMs - ms);
+    this.updateChapterState();
 
     this.updatePlayer(dt);
     this.updatePickups(dt);
@@ -672,27 +745,34 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.nextFoodMs -= ms;
     this.run.nextSkillMs -= ms;
     this.run.nextEnemyMs -= ms;
-    this.run.wave = 1 + Math.floor(this.run.timeMs / 30000);
+    this.run.nextEliteMs -= ms;
+    const chapter = this.updateChapterState();
+    this.run.wave = 1 + Math.floor(this.run.timeMs / 42000);
 
     const memoryRain = this.run.currentEvent?.id === "memory_rain";
     const hunt = this.run.currentEvent?.id === "hunt";
     if (this.run.nextFoodMs <= 0 && this.pickups.filter((p) => p.type === "food").length < (memoryRain ? 34 : 26)) {
-      this.run.nextFoodMs = memoryRain ? Math.max(260, GAME_CONFIG.foodSpawnMs * 0.48) : GAME_CONFIG.foodSpawnMs;
+      this.run.nextFoodMs = memoryRain ? Math.max(260, GAME_CONFIG.foodSpawnMs * 0.48) : Math.max(460, GAME_CONFIG.foodSpawnMs - chapter.index * 35);
       this.spawnPickup("food");
     }
     if (this.run.nextSkillMs <= 0 && this.pickups.filter((p) => p.type === "skill").length < 2) {
-      this.run.nextSkillMs = GAME_CONFIG.skillDropMs;
+      this.run.nextSkillMs = Math.max(7600, GAME_CONFIG.skillDropMs - chapter.index * 1000);
       this.spawnPickup("skill");
     }
-    if (this.run.nextEnemyMs <= 0 && this.enemies.length < 10 + this.run.wave * 3 + (hunt ? 5 : 0)) {
-      const pressure = Math.max(0, this.run.wave - 1);
+    const chapterPressure = chapter.index * 4;
+    if (this.run.nextEnemyMs <= 0 && this.enemies.length < 11 + this.run.wave * 2 + chapterPressure + (hunt ? 6 : 0) + (this.run.currentElite ? 4 : 0)) {
+      const pressure = Math.max(0, this.run.wave - 1) + chapter.index * 1.2;
       const teaching = this.run.timeMs < GAME_CONFIG.lethalProtectionMs;
-      this.run.nextEnemyMs = Math.max(hunt ? 230 : 320, GAME_CONFIG.enemySpawnMs - pressure * 80) * (teaching ? 1.55 : 1) * (hunt ? 0.58 : 1);
-      const eventKind = hunt && Math.random() < 0.68 ? "hunter" : undefined;
+      this.run.nextEnemyMs = Math.max(hunt ? 210 : 290, GAME_CONFIG.enemySpawnMs - pressure * 58) * (teaching ? 1.55 : 1) * (hunt ? 0.58 : 1);
+      const eventKind = hunt && Math.random() < 0.68 ? "hunter" : this.run.currentElite?.id === "idol_edict" && Math.random() < 0.26 ? "sentinel" : undefined;
       this.spawnEnemy(teaching && Math.random() < 0.72 ? "drifter" : eventKind);
     }
-    if (!this.run.bossSpawned && (this.run.timeMs >= GAME_CONFIG.bossSpawnMs || this.run.kills >= GAME_CONFIG.bossSpawnKills)) {
-      this.spawnBoss();
+    if (!this.boss && this.run.nextEliteMs <= 0 && this.run.timeMs > 70000) {
+      this.triggerEliteEvent();
+    }
+    const nextBoss = this.nextBossSpec();
+    if (!this.boss && nextBoss && (this.run.timeMs >= nextBoss.spawnMs || this.run.kills >= nextBoss.spawnKills)) {
+      this.spawnBoss(nextBoss);
     }
   }
 
@@ -707,7 +787,7 @@ class SerpentLifeScene extends Phaser.Scene {
       }
       return;
     }
-    if (this.run.bossSpawned) return;
+    if (this.boss) return;
     this.run.nextEventMs -= ms;
     if (this.run.nextEventMs > 0) return;
     const choices = [
@@ -732,8 +812,30 @@ class SerpentLifeScene extends Phaser.Scene {
     }
   }
 
+  triggerEliteEvent() {
+    const chapter = this.chapterForTime();
+    const pool = ELITE_EVENTS.filter((event) => this.run.timeMs >= event.minMs && (!event.chapter || event.chapter === chapter.id));
+    const event = pool.length ? pick(pool) : pick(ELITE_EVENTS);
+    this.run.currentElite = event;
+    this.run.nextEliteMs = 62000 + Math.random() * 28000;
+    this.addMemory(`精英事件：${event.name}。${event.text}`, "elite");
+    this.floatText(this.player.x, this.player.y - 112, event.name, event.color);
+    this.addRing(this.player.x, this.player.y, 330, event.color, 0.36);
+    const count = event.id === "idol_edict" ? 5 : 4;
+    for (let i = 0; i < count; i += 1) {
+      const kind = event.id === "crimson_surge" ? (i % 2 ? "bloomer" : "hunter") : event.id === "idol_edict" ? "sentinel" : (i % 2 ? "hunter" : "drifter");
+      this.spawnEnemy(kind, null, { elite: true, auraTint: event.color, hpMultiplier: event.id === "idol_edict" ? 2.1 : 1.65, scoreBonus: 60 });
+    }
+    if (event.id === "idol_edict") this.spawnPickup("skill");
+    this.screenShake = Math.max(this.screenShake, 8);
+    this.playEventSound(event.id);
+    window.setTimeout(() => {
+      if (this.run?.currentElite?.id === event.id) this.run.currentElite = null;
+    }, 12000);
+  }
+
   updateRunSurprises(ms) {
-    if (!this.run || this.mode !== "playing" || this.run.bossSpawned) return;
+    if (!this.run || this.mode !== "playing" || this.boss) return;
     this.run.nextSurpriseMs -= ms;
     if (this.run.nextSurpriseMs > 0) return;
     const pressure = Math.min(8000, this.run.greedPressure * 1200 + this.run.memoryOverflow * 900);
@@ -755,7 +857,7 @@ class SerpentLifeScene extends Phaser.Scene {
     const y = clamp(point.y, 80, GAME_CONFIG.arena - 80);
     const aura = this.add.image(x, y, "snake-glow").setTint(COLORS.reward);
     aura.setDisplaySize(type === "skill" ? 112 : 78, type === "skill" ? 112 : 78).setBlendMode(Phaser.BlendModes.ADD).setAlpha(type === "skill" ? 0.36 : 0.22);
-    const sprite = this.add.image(x, y, type === "skill" ? "vfx-lightning-core-v5" : "snake-memory-v5").setDisplaySize(type === "skill" ? 58 : 42, type === "skill" ? 58 : 42);
+    const sprite = this.add.image(x, y, type === "skill" ? this.textureOr("pickup-skill-v9", "vfx-lightning-core-v5") : this.textureOr("pickup-memory-v9", "snake-memory-v5")).setDisplaySize(type === "skill" ? 58 : 42, type === "skill" ? 58 : 42);
     sprite.setTint(type === "skill" ? 0xfff4c4 : 0xffc15a);
     this.tweens.add({ targets: aura, alpha: type === "skill" ? 0.48 : 0.34, duration: 900, yoyo: true, repeat: -1 });
     this.tweens.add({ targets: sprite, angle: 360, duration: type === "skill" ? 4200 : 5600, repeat: -1 });
@@ -849,7 +951,8 @@ class SerpentLifeScene extends Phaser.Scene {
       const card = document.createElement("button");
       card.className = `ui-card is-locked ${choice.rarity ? `is-${choice.rarity}` : ""}`;
       const suffix = choice.type === "skill" ? ` Lv.${current + 1}` : choice.badge ? ` · ${choice.badge}` : "";
-      card.innerHTML = `<strong><span>${choice.icon}</span>${choice.name}${suffix}</strong><em>${choice.text}</em>`;
+      const icon = choice.type === "skill" ? `<span class="ui-card-icon"><img src="assets/generated/v9-euro/skills/${choice.id}.png" alt="">${choice.icon}</span>` : `<span class="ui-card-icon">${choice.icon}</span>`;
+      card.innerHTML = `<strong>${icon}${choice.name}${suffix}</strong><em>${choice.text}</em>`;
       card.disabled = true;
       window.setTimeout(() => {
         card.disabled = false;
@@ -977,7 +1080,7 @@ class SerpentLifeScene extends Phaser.Scene {
     } else if (event.id === "boss_echo") {
       this.run.memoryOverflow += 1;
       this.addRing(this.player.x, this.player.y, 260, COLORS.rose, 0.36);
-      if (!this.run.bossSpawned && this.run.kills > 20) this.spawnBoss();
+      if (!this.boss && this.run.kills > 20) this.spawnBoss(this.nextBossSpec());
     } else if (event.id === "safe_void") {
       for (let i = this.enemies.length - 1; i >= 0; i -= 1) {
         if (Phaser.Math.Distance.Between(this.player.x, this.player.y, this.enemies[i].x, this.enemies[i].y) < 360) this.killEnemy(i, COLORS.cyan);
@@ -1094,28 +1197,34 @@ class SerpentLifeScene extends Phaser.Scene {
     return this.run?.comboHighlights?.includes(id) ?? false;
   }
 
-  spawnEnemy(forceKind, forcedPoint = null) {
+  spawnEnemy(forceKind, forcedPoint = null, mods = {}) {
     const roll = Math.random();
-    const kind = forceKind ?? (roll > 0.86 ? "bloomer" : roll > 0.56 ? "hunter" : "drifter");
+    const chapter = this.chapterForTime();
+    const kind = forceKind ?? (chapter.index >= 2 && roll > 0.92 ? "sentinel" : roll > 0.86 ? "bloomer" : roll > 0.56 ? "hunter" : "drifter");
     const spec = ENEMY_KINDS[kind];
     const point = forcedPoint ?? randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 500, 780);
-    const texture = kind === "bloomer" ? "enemy-bloomer-v5" : kind === "hunter" ? "enemy-hunter-v5" : "enemy-drifter-v5";
+    const texture = this.textureOr(`enemy-${kind}-v9`, kind === "bloomer" ? "enemy-bloomer-v5" : kind === "hunter" ? "enemy-hunter-v5" : "enemy-drifter-v5");
     const sprite = this.add.sprite(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), texture);
-    const baseSize = kind === "bloomer" ? 106 : kind === "hunter" ? 100 : 88;
+    const baseSize = (kind === "sentinel" ? 118 : kind === "bloomer" ? 106 : kind === "hunter" ? 100 : 88) * (mods.elite ? 1.12 : 1);
     sprite.setDisplaySize(baseSize, baseSize);
-    if (kind === "hunter") sprite.setTint(0xff7fca);
-    if (kind === "bloomer") sprite.setTint(0xe67bff);
-    const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(kind === "bloomer" ? COLORS.violet : COLORS.rose);
-    glow.setDisplaySize(spec.radius * 3.4, spec.radius * 3.4).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.16);
+    if (!String(texture).endsWith("-v9")) {
+      if (kind === "hunter") sprite.setTint(0xff7fca);
+      if (kind === "bloomer") sprite.setTint(0xe67bff);
+    }
+    const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(mods.auraTint ?? (kind === "sentinel" ? COLORS.gold : kind === "bloomer" ? COLORS.violet : COLORS.rose));
+    glow.setDisplaySize(spec.radius * (mods.elite ? 4.3 : 3.4), spec.radius * (mods.elite ? 4.3 : 3.4)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(mods.elite ? 0.28 : 0.16);
     this.enemyLayer.add([glow, sprite]);
+    const maxHp = (spec.hp + Math.floor((this.run.wave + chapter.index) * 0.38)) * (mods.hpMultiplier ?? 1);
     this.enemies.push({
       kind,
       x: sprite.x,
       y: sprite.y,
-      hp: spec.hp + Math.floor(this.run.wave * 0.45),
-      maxHp: spec.hp + Math.floor(this.run.wave * 0.45),
-      radius: spec.radius,
-      speed: spec.speed,
+      hp: maxHp,
+      maxHp,
+      radius: spec.radius * (mods.elite ? 1.18 : 1),
+      speed: spec.speed * (mods.elite ? 0.94 : 1),
+      elite: !!mods.elite,
+      scoreBonus: mods.scoreBonus ?? 0,
       slowMs: 0,
       hitMs: 0,
       sprite,
@@ -1132,7 +1241,8 @@ class SerpentLifeScene extends Phaser.Scene {
       e.slowMs = Math.max(0, e.slowMs - ms);
       e.wobble += dt * 3;
       const angle = Phaser.Math.Angle.Between(e.x, e.y, this.player.x, this.player.y);
-      const speed = e.speed * (1 + Math.min(0.8, this.run.timeMs / 180000)) * (e.slowMs > 0 ? 0.46 : 1);
+      const chapterPressure = (this.run.chapterIndex ?? 0) * 0.1;
+      const speed = e.speed * (1 + Math.min(0.46, this.run.timeMs / 520000) + chapterPressure) * (e.slowMs > 0 ? 0.46 : 1);
       e.x += Math.cos(angle + Math.sin(e.wobble) * 0.22) * speed * dt;
       e.y += Math.sin(angle + Math.sin(e.wobble) * 0.22) * speed * dt;
       e.sprite.setPosition(e.x, e.y);
@@ -1203,48 +1313,57 @@ class SerpentLifeScene extends Phaser.Scene {
     e.sprite.destroy();
     e.glow.destroy();
     this.run.kills += 1;
-    this.run.score += spec.score;
+    this.run.score += spec.score + (e.scoreBonus ?? 0);
     this.playImpact(e.x, e.y, color, e.kind === "bloomer" ? 0.88 : 0.72);
     this.addBurst(e.x, e.y, color, e.kind === "bloomer" ? 94 : 68, 0.25);
-    if (Math.random() < 0.11) this.spawnPickup("food");
+    if (Math.random() < (e.elite ? 0.75 : 0.11)) this.spawnPickup(e.elite && Math.random() < 0.28 ? "skill" : "food");
+    if (e.elite) this.addMemory(`精英「${spec.name}」倒下，留下一段发热的记忆。`, "elite");
     if (this.run.kills % 18 === 0) this.addMemory(`它在第${this.run.wave}波杀出一条窄路。`, "kill");
     this.playHitSound();
   }
 
-  spawnBoss() {
+  spawnBoss(spec = this.nextBossSpec()) {
+    if (!spec) return;
     this.run.bossSpawned = true;
+    this.run.activeBossId = spec.id;
     const point = {
       x: this.player.x + Math.cos(this.player.angle) * 330,
       y: this.player.y + Math.sin(this.player.angle) * 330,
     };
-    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "boss-core-v5");
-    sprite.setDisplaySize(266, 266);
-    const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(COLORS.rose).setDisplaySize(284, 284).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
+    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), this.textureOr(spec.texture, spec.fallbackTexture));
+    const size = spec.final ? 318 : spec.id === "crimson_molt" ? 292 : 252;
+    sprite.setDisplaySize(size, size);
+    const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(spec.color).setDisplaySize(size * 1.12, size * 1.12).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
     const hpBar = this.add.graphics();
     this.enemyLayer.add([glow, sprite, hpBar]);
     this.boss = {
+      id: spec.id,
+      name: spec.name,
+      spec,
       x: sprite.x,
       y: sprite.y,
-      hp: GAME_CONFIG.bossHp,
-      maxHp: GAME_CONFIG.bossHp,
-      radius: 68,
-      speed: 82,
+      hp: spec.hp,
+      maxHp: spec.hp,
+      radius: spec.radius,
+      speed: spec.speed,
       sprite,
       glow,
       hpBar,
       phase: 1,
-      shield: GAME_CONFIG.bossShieldWeakpoints,
+      shield: spec.shield,
+      shieldMax: spec.shield,
       weakAngle: -Math.PI / 2,
       weakOpenMs: 4200,
       stunMs: 0,
+      shotClock: 0,
     };
     this.createBossWeakpoints();
     this.updateBossWeakpoints();
     this.updateBossHpBar();
-    this.addMemory("Boss 从终点巢穴里醒来。", "boss");
-    this.floatText(this.player.x, this.player.y - 80, "终点 Boss 醒来", COLORS.rose);
-    this.addRing(this.player.x, this.player.y, 270, COLORS.enemyShot, 0.36);
-    this.addRing(sprite.x, sprite.y, 240, COLORS.enemyShot, 0.42);
+    this.addMemory(`${spec.name}从${this.chapterForTime().shortName}深处醒来。`, "boss");
+    this.floatText(this.player.x, this.player.y - 80, `${spec.name} 醒来`, spec.color);
+    this.addRing(this.player.x, this.player.y, 270, spec.projectileColor, 0.36);
+    this.addRing(sprite.x, sprite.y, 240, spec.projectileColor, 0.42);
     this.screenShake = Math.max(this.screenShake, 12);
     this.playBossSpawnSound();
   }
@@ -1293,16 +1412,16 @@ class SerpentLifeScene extends Phaser.Scene {
     b.hpBar.clear();
     b.hpBar.fillStyle(0x05090c, 0.78);
     b.hpBar.fillRoundedRect(x - 4, y - 4, w + 8, h + 8, 7);
-    b.hpBar.lineStyle(2, COLORS.rose, 0.45);
+    b.hpBar.lineStyle(2, b.spec.color, 0.45);
     b.hpBar.strokeRoundedRect(x - 4, y - 4, w + 8, h + 8, 7);
     b.hpBar.fillStyle(COLORS.rose, 0.22);
     b.hpBar.fillRoundedRect(x, y, w, h, 6);
-    b.hpBar.fillStyle(b.shield > 0 ? COLORS.dangerCore : COLORS.gold, 0.92);
+    b.hpBar.fillStyle(b.shield > 0 ? b.spec.projectileColor : COLORS.gold, 0.92);
     b.hpBar.fillRoundedRect(x, y, Math.max(4, w * pct), h, 6);
     if (b.shield > 0) {
-      const gap = w / GAME_CONFIG.bossShieldWeakpoints;
+      const gap = w / Math.max(1, b.shieldMax);
       b.hpBar.lineStyle(2, COLORS.white, 0.32);
-      for (let i = 1; i < GAME_CONFIG.bossShieldWeakpoints; i += 1) {
+      for (let i = 1; i < b.shieldMax; i += 1) {
         b.hpBar.beginPath();
         b.hpBar.moveTo(x + gap * i, y - 2);
         b.hpBar.lineTo(x + gap * i, y + h + 2);
@@ -1315,11 +1434,11 @@ class SerpentLifeScene extends Phaser.Scene {
     this.bossWeakpoints.forEach((wp) => wp.sprite?.destroy());
     this.bossWeakpoints = [];
     if (!this.boss) return;
-    for (let i = 0; i < GAME_CONFIG.bossShieldWeakpoints; i += 1) {
-      const sprite = this.add.circle(this.boss.x, this.boss.y, 10, COLORS.dangerCore, 0.42).setStrokeStyle(2, COLORS.white, 0.45);
+    for (let i = 0; i < this.boss.shieldMax; i += 1) {
+      const sprite = this.add.circle(this.boss.x, this.boss.y, 10, this.boss.spec.projectileColor, 0.42).setStrokeStyle(2, COLORS.white, 0.45);
       sprite.setBlendMode(Phaser.BlendModes.ADD);
       this.enemyLayer.add(sprite);
-      this.bossWeakpoints.push({ index: i, angle: (i / GAME_CONFIG.bossShieldWeakpoints) * TWO_PI, broken: false, sprite });
+      this.bossWeakpoints.push({ index: i, angle: (i / this.boss.shieldMax) * TWO_PI, broken: false, sprite });
     }
   }
 
@@ -1345,20 +1464,23 @@ class SerpentLifeScene extends Phaser.Scene {
       wp.sprite.setPosition(wp.x, wp.y);
       wp.sprite.setRadius(active ? 12 + Math.sin(this.run.timeMs / 90) * 2 : 8);
       wp.sprite.setAlpha(active ? 0.62 : 0.22);
-      wp.sprite.setFillStyle(active ? COLORS.dangerCore : COLORS.rose, active ? 0.46 : 0.18);
+      wp.sprite.setFillStyle(active ? this.boss.spec.projectileColor : this.boss.spec.color, active ? 0.46 : 0.18);
     });
   }
 
   spawnBossProjectiles() {
     if (!this.boss) return;
-    const count = this.boss.phase === 2 ? 7 : 5;
+    const pattern = this.boss.spec.pattern;
+    const count = pattern === "spiral" ? (this.boss.phase === 2 ? 12 : 9) : pattern === "cross" ? 8 : this.boss.phase === 2 ? 7 : 5;
     const base = Phaser.Math.Angle.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
     for (let i = 0; i < count; i += 1) {
-      const spread = (i - (count - 1) / 2) * 0.18;
-      const angle = base + spread;
+      let angle = base + (i - (count - 1) / 2) * 0.18;
+      if (pattern === "cross") angle = (i / count) * TWO_PI + (this.boss.phase === 2 ? this.run.timeMs / 900 : 0);
+      if (pattern === "spiral") angle = (i / count) * TWO_PI + this.run.timeMs / (this.boss.phase === 2 ? 620 : 840);
       const sprite = this.add.image(this.boss.x, this.boss.y, "enemy-projectile").setDisplaySize(24, 24);
+      sprite.setTint(this.boss.spec.projectileColor);
       this.projectileLayer.add(sprite);
-      this.projectiles.push({ x: this.boss.x, y: this.boss.y, angle, speed: 185, radius: 9, lifeMs: 3600, sprite });
+      this.projectiles.push({ x: this.boss.x, y: this.boss.y, angle, speed: pattern === "spiral" ? 150 : 185, radius: 9, lifeMs: pattern === "spiral" ? 4300 : 3600, sprite });
     }
     this.playSfx("boss-shot", 450, () => {
       this.tone(this.boss.phase === 2 ? 164 : 124, 0.09, "sawtooth", 0.018);
@@ -1769,20 +1891,43 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addSpark(weak?.x ?? this.boss.x, weak?.y ?? this.boss.y, weak ? COLORS.dangerCore : color, weak ? 7 : 2, weak ? 0.76 : 0.3);
     this.playImpact(weak?.x ?? this.boss.x, weak?.y ?? this.boss.y, weak ? COLORS.dangerCore : color, weak ? 1.05 : 0.84);
     if (weak) this.playWeakHitSound();
-    if (this.boss.hp <= 0) {
-      const { x, y } = this.boss;
-      this.boss.sprite.destroy();
-      this.boss.glow.destroy();
-      this.boss.hpBar?.destroy();
-      this.bossWeakpoints.forEach((wp) => wp.sprite?.destroy());
-      this.bossWeakpoints = [];
-      this.boss = null;
+    if (this.boss.hp <= 0) this.defeatBoss();
+  }
+
+  defeatBoss() {
+    if (!this.boss) return;
+    const boss = this.boss;
+    const { x, y, spec } = boss;
+    boss.sprite.destroy();
+    boss.glow.destroy();
+    boss.hpBar?.destroy();
+    this.bossWeakpoints.forEach((wp) => wp.sprite?.destroy());
+    this.bossWeakpoints = [];
+    this.projectiles.forEach((p) => p.sprite?.destroy());
+    this.projectiles = [];
+    this.boss = null;
+    this.run.bossSpawned = false;
+    this.run.activeBossId = null;
+    this.run.clearedBosses.push(spec.id);
+    this.run.score += spec.final ? 1600 : 760;
+    this.run.coreHp = Math.min(GAME_CONFIG.initialCoreHp, this.run.coreHp + 1);
+    this.run.bodyCracks = 0;
+    this.addMemory(spec.rewardText, spec.final ? "victory" : "boss");
+    this.addBurst(x, y, spec.final ? COLORS.gold : spec.color, spec.final ? 320 : 240, 0.44);
+    this.addRing(x, y, spec.final ? 360 : 280, spec.color, 0.44);
+    this.screenShake = Math.max(this.screenShake, spec.final ? 18 : 12);
+    for (let i = 0; i < (spec.final ? 8 : 5); i += 1) this.spawnPickup(i === 0 ? "skill" : "food", x + Phaser.Math.Between(-140, 140), y + Phaser.Math.Between(-140, 140));
+    if (spec.final) {
       this.run.bossDefeated = true;
-      this.addMemory("它击碎了终点 Boss 的心脏。", "victory");
-      this.addBurst(x, y, COLORS.gold, 260, 0.42);
-      this.run.score += 900;
       this.endRun("victory");
+      return;
     }
+    this.run.nextEliteMs = 26000;
+    this.run.nextEventMs = 12000;
+    this.floatText(x, y - 92, `${spec.name} 已击败`, COLORS.gold);
+    window.setTimeout(() => {
+      if (this.mode === "playing") this.openUpgrade("boss");
+    }, 500);
   }
 
   hitBossWeakpoint(x, y) {
@@ -1795,7 +1940,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.boss.stunMs = Math.max(this.boss.stunMs, 720);
     this.screenShake = Math.max(this.screenShake, 10);
     this.addRing(weak.x, weak.y, 92, COLORS.dangerCore, 0.42);
-    this.floatText(weak.x, weak.y - 28, this.boss.shield > 0 ? `弱点破裂 ${GAME_CONFIG.bossShieldWeakpoints - this.boss.shield}/${GAME_CONFIG.bossShieldWeakpoints}` : "Boss 破盾", COLORS.dangerCore);
+    this.floatText(weak.x, weak.y - 28, this.boss.shield > 0 ? `弱点破裂 ${this.boss.shieldMax - this.boss.shield}/${this.boss.shieldMax}` : "Boss 破盾", COLORS.dangerCore);
     if (this.boss.shield === 0) {
       this.addMemory("Boss 护盾碎裂，核心暴露。", "boss");
       this.playComboSound("boss_break");
@@ -1856,11 +2001,11 @@ class SerpentLifeScene extends Phaser.Scene {
       const glow = this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : isMemory ? COLORS.reward : COLORS.jade);
       glow.setDisplaySize(size * (i === 0 ? 3.9 : 2.65), size * (i === 0 ? 3.9 : 2.65)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.5 : isMemory ? 0.24 : 0.14);
       if (i === 0) {
-        const body = this.add.image(p.x, p.y, "snake-head-v5");
+        const body = this.add.image(p.x, p.y, this.textureOr("snake-head-v9", "snake-head-v5"));
         const headAngle = p.angle ?? this.player.angle;
         body.setRotation(headAngle);
         body.setFlipY(Math.cos(headAngle) < -0.08);
-        body.setDisplaySize(82, 82);
+        body.setDisplaySize(88, 88);
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
         const crest = this.add.graphics();
@@ -1880,7 +2025,7 @@ class SerpentLifeScene extends Phaser.Scene {
         crest.fillCircle(18, 7, 3.5);
         this.snakeLayer.add([glow, body, crest]);
       } else {
-        const texture = isTail ? "snake-tail-v5" : isMemory ? "snake-memory-v5" : "snake-body-v5";
+        const texture = isTail ? this.textureOr("snake-tail-v9", "snake-tail-v5") : isMemory ? this.textureOr("snake-memory-v9", "snake-memory-v5") : this.textureOr("snake-body-v9", "snake-body-v5");
         const displayX = isTail ? 46 + taper * 16 : isMemory ? 42 + taper * 8 : 38 + taper * 8;
         const displayY = isTail ? 34 + taper * 12 : isMemory ? 42 + taper * 8 : 38 + taper * 8;
         const body = this.add.image(p.x, p.y, texture);
@@ -1916,14 +2061,17 @@ class SerpentLifeScene extends Phaser.Scene {
     const protect = this.run.timeMs < GAME_CONFIG.lethalProtectionMs ? " · 保" : "";
     const cracks = this.run.bodyCracks > 0 ? ` · 裂${this.run.bodyCracks}/${GAME_CONFIG.bodyCrackLimit}` : "";
     const event = this.run.currentEvent ? ` · ${this.run.currentEvent.name}` : "";
+    const elite = this.run.currentElite ? ` · ${this.run.currentElite.name}` : "";
+    const chapter = this.chapterForTime();
     const stage = this.currentGrowthStage();
     const overload = this.run.memoryOverflow ? ` · 过载${this.run.memoryOverflow}` : "";
-    this.dom.meta.textContent = `${stage.name} ${this.run.segments}/${GAME_CONFIG.maxSegments}${overload} · ${Math.floor(this.run.timeMs / 1000)}s · ${this.run.kills}杀${cracks}${event}${protect}`;
+    if (this.dom.chapter) this.dom.chapter.textContent = `${chapter.name} · ${this.nextBossSpec()?.name ?? "终局完成"}`;
+    this.dom.meta.textContent = `${stage.name} ${this.run.segments}/${GAME_CONFIG.maxSegments}${overload} · ${Math.floor(this.run.timeMs / 1000)}s · ${this.run.kills}杀${cracks}${event}${elite}${protect}`;
     this.dom.skills.innerHTML = SKILLS.map((skill) => {
       const lv = this.run.skills[skill.id];
-      return `<span class="${lv ? "is-on" : ""}">${skill.icon}${lv || ""}</span>`;
+      return `<span class="${lv ? "is-on" : ""}"><img src="assets/generated/v9-euro/skills/${skill.id}.png" alt="">${lv || ""}</span>`;
     }).join("");
-    const awakenPct = this.boss ? 1 : clamp((this.run.timeMs / GAME_CONFIG.bossSpawnMs), 0, 1);
+    const awakenPct = this.boss ? 1 : this.bossProgress();
     this.dom.progress.style.width = `${Math.round(awakenPct * 100)}%`;
     if (this.dom.bossBar && this.dom.bossHp && this.dom.bossLabel) {
       const active = !!this.boss;
@@ -1931,7 +2079,7 @@ class SerpentLifeScene extends Phaser.Scene {
       if (active) {
         const pct = clamp(this.boss.hp / this.boss.maxHp, 0, 1);
         this.dom.bossHp.style.width = `${Math.round(pct * 100)}%`;
-        this.dom.bossLabel.textContent = `Boss HP ${Math.round(pct * 100)}% · 护盾 ${this.boss.shield}/${GAME_CONFIG.bossShieldWeakpoints}`;
+        this.dom.bossLabel.textContent = `${this.boss.name} ${Math.round(pct * 100)}% · 护盾 ${this.boss.shield}/${this.boss.shieldMax}`;
       }
     }
   }
@@ -1961,8 +2109,8 @@ class SerpentLifeScene extends Phaser.Scene {
     }
     if (this.dom?.lifeText) this.dom.lifeText.textContent = result;
     if (this.dom?.final) {
-      const boss = this.boss ? ` · Boss ${Math.max(0, Math.round((this.boss.hp / this.boss.maxHp) * 100))}%` : this.run.bossDefeated ? " · Boss 已倒下" : "";
-      this.dom.final.textContent = `分数 ${this.run.score} · 击杀 ${this.run.kills} · 长度 ${this.run.segments}/${GAME_CONFIG.maxSegments} · 第${this.run.wave}波${boss}`;
+      const boss = this.boss ? ` · ${this.boss.name} ${Math.max(0, Math.round((this.boss.hp / this.boss.maxHp) * 100))}%` : this.run.bossDefeated ? " · 终局已破" : ` · Boss ${this.run.clearedBosses.length}/${BOSS_STAGES.length}`;
+      this.dom.final.textContent = `分数 ${this.run.score} · 击杀 ${this.run.kills} · 长度 ${this.run.segments}/${GAME_CONFIG.maxSegments} · ${this.chapterForTime().shortName}${boss}`;
     }
     if (this.dom?.endingKicker) this.dom.endingKicker.textContent = cause === "victory" ? "功成身退" : "死亡即故事";
     if (this.dom?.endingTitle) this.dom.endingTitle.textContent = cause === "victory" ? "它抵达了结尾" : "这条蛇的一生";

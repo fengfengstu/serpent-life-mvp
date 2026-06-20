@@ -66,6 +66,20 @@ async function runViewport(browser, viewport) {
         "vfx-shield-star-v5",
         "vfx-lightning-core-v5",
         "lightning-bolt-v8",
+        "arena-v9",
+        "snake-head-v9",
+        "snake-body-v9",
+        "snake-memory-v9",
+        "snake-tail-v9",
+        "enemy-drifter-v9",
+        "enemy-hunter-v9",
+        "enemy-bloomer-v9",
+        "enemy-sentinel-v9",
+        "boss-warden-v9",
+        "boss-crimson-v9",
+        "boss-archivist-v9",
+        "pickup-memory-v9",
+        "pickup-skill-v9",
         "enemy-drifter-v5",
         "enemy-hunter-v5",
         "enemy-bloomer-v5",
@@ -76,6 +90,9 @@ async function runViewport(browser, viewport) {
         "snake-head-v5",
         "vfx-fire-ring-v5",
         "fire-circle-v8",
+        "arena-v9",
+        "snake-head-v9",
+        "boss-archivist-v9",
         "enemy-drifter-v5",
       ].map((key) => {
         const source = scene.textures.get(key).source[0];
@@ -169,6 +186,7 @@ async function runViewport(browser, viewport) {
     };
 
     scene.spawnBoss();
+    const firstBossId = scene.boss?.id;
     const bossHp0 = scene.boss.hp;
     const weak = scene.bossWeakpoints.find((wp) => wp.active && !wp.broken) ?? scene.bossWeakpoints.find((wp) => !wp.broken);
     scene.damageBoss(12, 0x9af7ff, weak.x, weak.y, "shot");
@@ -183,6 +201,33 @@ async function runViewport(browser, viewport) {
       worldBarExists: !!scene.boss?.hpBar,
     };
 
+    scene.boss.hp = 1;
+    scene.damageBoss(999, 0x9af7ff, scene.boss.x, scene.boss.y, "shot");
+    const afterFirstBoss = {
+      mode: scene.mode,
+      cleared: [...scene.run.clearedBosses],
+      boss: !!scene.boss,
+      nextBoss: scene.nextBossSpec()?.id ?? null,
+    };
+
+    scene.triggerEliteEvent();
+    const eliteProbe = {
+      currentElite: scene.run.currentElite?.id ?? null,
+      eliteEnemies: scene.enemies.filter((e) => e.elite).length,
+    };
+
+    scene.run.clearedBosses = ["memory_warden", "crimson_molt"];
+    const finalSpec = scene.nextBossSpec();
+    scene.spawnBoss(finalSpec);
+    scene.boss.hp = 1;
+    scene.boss.shield = 0;
+    scene.damageBoss(999, 0xffd166, scene.boss.x, scene.boss.y, "shot");
+    const finalBossProbe = {
+      mode: scene.mode,
+      bossDefeated: scene.run.bossDefeated,
+      cleared: [...scene.run.clearedBosses],
+    };
+
     scene.endRun("swarmed");
     scene.startRun();
     return {
@@ -193,6 +238,10 @@ async function runViewport(browser, viewport) {
       fireProbe,
       surpriseProbe,
       bossProbe,
+      firstBossId,
+      afterFirstBoss,
+      eliteProbe,
+      finalBossProbe,
       retryClean: {
         boss: !!scene.boss,
         projectiles: scene.projectiles.length,
@@ -200,6 +249,9 @@ async function runViewport(browser, viewport) {
         frostFields: scene.frostFields.length,
         bodyCracks: scene.run.bodyCracks,
         currentEvent: scene.run.currentEvent,
+        currentElite: scene.run.currentElite,
+        clearedBosses: scene.run.clearedBosses.length,
+        bossWeakpoints: scene.bossWeakpoints.length,
         hasMusic: !!scene.musicNodes,
       },
     };
@@ -283,9 +335,9 @@ for (const result of results) {
   if (result.first.mode !== "playing") failures.push(`${result.viewport.name}: first screen not playing`);
   if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
-  if (!String(result.first.firstEnemyTexture).endsWith("-v5")) failures.push(`${result.viewport.name}: first enemy is not V5 art`);
-  if (!result.first.textureSourceSizes.every(([key, w, h]) => key === "arena-v5" ? w >= 2048 && h >= 2048 : key === "fire-circle-v8" ? w >= 3200 && h >= 3200 : w >= 512 && h >= 512)) {
-    failures.push(`${result.viewport.name}: V5 source texture is not high resolution`);
+  if (!String(result.first.firstEnemyTexture).endsWith("-v9")) failures.push(`${result.viewport.name}: first enemy is not V9 art`);
+  if (!result.first.textureSourceSizes.every(([key, w, h]) => key === "arena-v5" || key === "arena-v9" ? w >= 2048 && h >= 2048 : key === "fire-circle-v8" ? w >= 3200 && h >= 3200 : w >= 512 && h >= 512)) {
+    failures.push(`${result.viewport.name}: source texture is not high resolution`);
   }
   result.first.canvas.highDprBackingStore =
     result.first.canvas.width >= result.first.canvas.cssWidth * 2 &&
@@ -302,7 +354,10 @@ for (const result of results) {
   if (result.gameplayProbe.surpriseProbe.after <= result.gameplayProbe.surpriseProbe.before) failures.push(`${result.viewport.name}: director surprise did not trigger`);
   if (result.gameplayProbe.bossProbe.shieldAfterWeakHit >= 3 || !result.gameplayProbe.bossProbe.weakHitDamaged) failures.push(`${result.viewport.name}: boss weakpoint did not register`);
   if (!result.gameplayProbe.bossProbe.hudVisible || !result.gameplayProbe.bossProbe.worldBarExists) failures.push(`${result.viewport.name}: boss HP bar missing`);
-  if (result.gameplayProbe.retryClean.boss || result.gameplayProbe.retryClean.projectiles || result.gameplayProbe.retryClean.shots || result.gameplayProbe.retryClean.frostFields || result.gameplayProbe.retryClean.bodyCracks || result.gameplayProbe.retryClean.currentEvent) {
+  if (!result.gameplayProbe.firstBossId || result.gameplayProbe.afterFirstBoss.mode !== "playing" || result.gameplayProbe.afterFirstBoss.cleared.length < 1 || !result.gameplayProbe.afterFirstBoss.nextBoss) failures.push(`${result.viewport.name}: first boss did not advance chapter flow`);
+  if (!result.gameplayProbe.eliteProbe.currentElite || result.gameplayProbe.eliteProbe.eliteEnemies < 1) failures.push(`${result.viewport.name}: elite event did not spawn elites`);
+  if (result.gameplayProbe.finalBossProbe.mode !== "gameover" || !result.gameplayProbe.finalBossProbe.bossDefeated || result.gameplayProbe.finalBossProbe.cleared.length < 2) failures.push(`${result.viewport.name}: final boss did not end run`);
+  if (result.gameplayProbe.retryClean.boss || result.gameplayProbe.retryClean.projectiles || result.gameplayProbe.retryClean.shots || result.gameplayProbe.retryClean.frostFields || result.gameplayProbe.retryClean.bodyCracks || result.gameplayProbe.retryClean.currentEvent || result.gameplayProbe.retryClean.currentElite || result.gameplayProbe.retryClean.clearedBosses || result.gameplayProbe.retryClean.bossWeakpoints) {
     failures.push(`${result.viewport.name}: retry retained gameplay state`);
   }
   if (!result.gameplayProbe.retryClean.hasMusic) failures.push(`${result.viewport.name}: music did not restart after retry`);

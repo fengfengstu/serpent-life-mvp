@@ -21,8 +21,8 @@ export const GAME_CONFIG = {
   foodSpawnMs: 680,
   skillDropMs: 12000,
   enemySpawnMs: 1180,
-  bossSpawnMs: 135000,
-  bossSpawnKills: 54,
+  bossSpawnMs: 120000,
+  bossSpawnKills: 48,
   bossHp: 360,
   bossShieldWeakpoints: 3,
   bodyCrackLimit: 3,
@@ -40,6 +40,123 @@ export const GROWTH_STAGES = [
   { id: "array", name: "阵蛇", at: 20, text: "身体变成移动阵地，格挡收益变高。" },
   { id: "final_molt", name: "终蜕", at: 26, text: "记忆接近满载，稀有事件开始出现。" },
   { id: "overload", name: "贪满", at: 32, text: "身体不再增长，额外记忆会转为过载。" },
+];
+
+export const CHAPTERS = [
+  {
+    id: "hatchery",
+    name: "一章：孵梦回廊",
+    shortName: "孵梦",
+    startMs: 0,
+    color: 0xffb238,
+    text: "熟悉移动、吞噬记忆，第一次把身体变成武器。",
+  },
+  {
+    id: "archive",
+    name: "二章：暗金档案",
+    shortName: "档案",
+    startMs: 120000,
+    color: 0x36e89f,
+    text: "敌群变密，精英开始干扰路线，构筑必须成形。",
+  },
+  {
+    id: "molt",
+    name: "三章：绯红蜕场",
+    shortName: "蜕场",
+    startMs: 270000,
+    color: 0xff5f91,
+    text: "怪潮和 Boss 弹幕压缩空间，长身体既是火力也是负担。",
+  },
+  {
+    id: "throne",
+    name: "终章：蛇祀王座",
+    shortName: "王座",
+    startMs: 420000,
+    color: 0x9d7dff,
+    text: "所有技能组合进入终局压力测试，击败档案蛇像才算抵达结尾。",
+  },
+];
+
+export const BOSS_STAGES = [
+  {
+    id: "memory_warden",
+    name: "记忆典狱长",
+    chapter: "archive",
+    spawnMs: 115000,
+    spawnKills: 44,
+    hp: 260,
+    radius: 58,
+    speed: 74,
+    shield: 2,
+    color: 0x36e89f,
+    projectileColor: 0x7ce6ff,
+    texture: "boss-warden-v9",
+    fallbackTexture: "boss-core-v5",
+    pattern: "cross",
+    rewardText: "典狱长碎裂，档案门第一次打开。",
+  },
+  {
+    id: "crimson_molt",
+    name: "绯红蜕王",
+    chapter: "molt",
+    spawnMs: 270000,
+    spawnKills: 96,
+    hp: 420,
+    radius: 72,
+    speed: 88,
+    shield: 3,
+    color: 0xff5f91,
+    projectileColor: 0xff7043,
+    texture: "boss-crimson-v9",
+    fallbackTexture: "boss-core-v5",
+    pattern: "fan",
+    rewardText: "绯红旧皮脱落，蛇身短暂轻了下来。",
+  },
+  {
+    id: "archivist_idol",
+    name: "档案蛇像",
+    chapter: "throne",
+    spawnMs: 430000,
+    spawnKills: 150,
+    hp: 620,
+    radius: 84,
+    speed: 70,
+    shield: 4,
+    color: 0x9d7dff,
+    projectileColor: 0xfff0b0,
+    texture: "boss-archivist-v9",
+    fallbackTexture: "boss-core-v5",
+    pattern: "spiral",
+    final: true,
+    rewardText: "档案蛇像倒下，这条蛇终于写完了自己。",
+  },
+];
+
+export const ELITE_EVENTS = [
+  {
+    id: "warden_patrol",
+    name: "典狱巡行",
+    chapter: "archive",
+    minMs: 90000,
+    color: 0x36e89f,
+    text: "一队裂牙从记忆边缘包抄。",
+  },
+  {
+    id: "crimson_surge",
+    name: "绯红潮汐",
+    chapter: "molt",
+    minMs: 230000,
+    color: 0xff5f91,
+    text: "瘤核携带绯红孢群逼近蛇首。",
+  },
+  {
+    id: "idol_edict",
+    name: "蛇像敕令",
+    chapter: "throne",
+    minMs: 390000,
+    color: 0x9d7dff,
+    text: "全场敌影短暂共鸣，技能核掉落率提高。",
+  },
 ];
 
 export const RELIC_POOL = [
@@ -175,6 +292,7 @@ export const ENEMY_KINDS = {
   drifter: { name: "饥影", hp: 2, radius: 18, speed: 92, score: 18 },
   hunter: { name: "裂牙", hp: 4, radius: 21, speed: 128, score: 36 },
   bloomer: { name: "瘤核", hp: 7, radius: 26, speed: 72, score: 64 },
+  sentinel: { name: "典狱卫", hp: 12, radius: 30, speed: 96, score: 110 },
 };
 
 export const LIFE_TEMPLATES = [
