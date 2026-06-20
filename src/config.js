@@ -24,6 +24,12 @@ export const GAME_CONFIG = {
   bossSpawnMs: 135000,
   bossSpawnKills: 54,
   bossHp: 360,
+  bossShieldWeakpoints: 3,
+  bodyCrackLimit: 3,
+  bodyHitCooldownMs: 760,
+  firstEventMs: 18000,
+  waveEventMs: 28000,
+  waveEventDurationMs: 9000,
   settlementHardCapMs: 20000,
 };
 
@@ -55,35 +61,35 @@ export const SKILLS = [
     name: "火焰光环",
     icon: "火",
     theme: "flame",
-    text: "蛇身节点周期性爆出火环，清理贴身怪潮。",
+    text: "蛇鳞边缘燃起火脊，长度越长，覆盖越广。",
   },
   {
     id: "frost",
     name: "冰冻轨迹",
     icon: "冰",
     theme: "frost",
-    text: "尾迹留下冰雾，减速并蚕食追兵。",
+    text: "尾迹留下冰痕，怪潮踩上后减速并碎裂。",
   },
   {
     id: "turret",
     name: "弹射炮台",
     icon: "炮",
     theme: "tech",
-    text: "蛇身节点自动发射弹丸，在怪群间弹射。",
+    text: "身体节点长出炮口，从鳞片侧边开火。",
   },
   {
     id: "shield",
     name: "旋转护盾",
     icon: "盾",
     theme: "guard",
-    text: "蛇头周围生成护盾星，近身敌人会被切开。",
+    text: "前半身合上护甲弧片，降低身体裂痕风险。",
   },
   {
     id: "lightning",
     name: "闪电链",
     icon: "雷",
     theme: "voltage",
-    text: "电弧寻找最近敌人，并向附近目标跳跃。",
+    text: "电荷先沿骨节奔跑，再跳向敌人弱点。",
   },
 ];
 

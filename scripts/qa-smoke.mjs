@@ -99,6 +99,61 @@ async function runViewport(browser, viewport) {
   });
   await page.screenshot({ path: `qa-smoke-${viewport.name}-skills.png`, fullPage: false });
 
+  const gameplayProbe = await page.evaluate(() => {
+    const scene = window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene;
+    const audioBefore = {
+      hasCtx: !!scene.audioCtx,
+      state: scene.audioCtx?.state ?? null,
+      hasMusic: !!scene.musicNodes,
+      layer: scene.musicDebug?.layer ?? null,
+    };
+
+    scene.run.nextEventMs = 0;
+    scene.updateWaveEvent(1);
+    const eventStarted = !!scene.run.currentEvent;
+
+    scene.run.segments = Math.max(10, scene.run.segments);
+    scene.run.bodyCracks = 0;
+    scene.run.bodyHitCooldownMs = 0;
+    const bodyPoint = scene.getSegmentPoint(4);
+    const beforeSegments = scene.run.segments;
+    scene.handleBodyContact(0, { index: 4, point: bodyPoint });
+    const bodyRisk = {
+      cracks: scene.run.bodyCracks,
+      segmentsBefore: beforeSegments,
+      segmentsAfter: scene.run.segments,
+    };
+
+    scene.spawnBoss();
+    const bossHp0 = scene.boss.hp;
+    const weak = scene.bossWeakpoints.find((wp) => wp.active && !wp.broken) ?? scene.bossWeakpoints.find((wp) => !wp.broken);
+    scene.damageBoss(12, 0x9af7ff, weak.x, weak.y, "shot");
+    const bossProbe = {
+      shieldAfterWeakHit: scene.boss?.shield ?? 0,
+      hpAfterWeakHit: scene.boss?.hp ?? 0,
+      weakpoints: scene.bossWeakpoints.length,
+      weakHitDamaged: (scene.boss?.hp ?? 0) < bossHp0,
+    };
+
+    scene.endRun("swarmed");
+    scene.startRun();
+    return {
+      audioBefore,
+      eventStarted,
+      bodyRisk,
+      bossProbe,
+      retryClean: {
+        boss: !!scene.boss,
+        projectiles: scene.projectiles.length,
+        shots: scene.shots.length,
+        frostFields: scene.frostFields.length,
+        bodyCracks: scene.run.bodyCracks,
+        currentEvent: scene.run.currentEvent,
+        hasMusic: !!scene.musicNodes,
+      },
+    };
+  });
+
   await page.mouse.move(viewport.width * 0.38, viewport.height * 0.72);
   await page.mouse.down();
   await page.mouse.move(viewport.width * 0.8, viewport.height * 0.76, { steps: 8 });
@@ -149,6 +204,7 @@ async function runViewport(browser, viewport) {
     logs: logs.filter((line) => !line.includes("GPU stall due to ReadPixels")),
     first,
     skillVisuals,
+    gameplayProbe,
     joystick,
     upgrade,
     endingOverflow: endingOverflow.length,
@@ -179,6 +235,14 @@ for (const result of results) {
     result.first.canvas.width >= result.first.canvas.cssWidth * 2 &&
     result.first.canvas.height >= result.first.canvas.cssHeight * 2;
   if (result.skillVisuals.skillLayerChildren < 5) failures.push(`${result.viewport.name}: skill visuals did not render`);
+  if (!result.gameplayProbe.audioBefore.hasCtx || !result.gameplayProbe.audioBefore.hasMusic) failures.push(`${result.viewport.name}: audio/BGM did not start`);
+  if (!result.gameplayProbe.eventStarted) failures.push(`${result.viewport.name}: wave event did not start`);
+  if (result.gameplayProbe.bodyRisk.cracks < 1) failures.push(`${result.viewport.name}: body risk did not add cracks`);
+  if (result.gameplayProbe.bossProbe.shieldAfterWeakHit >= 3 || !result.gameplayProbe.bossProbe.weakHitDamaged) failures.push(`${result.viewport.name}: boss weakpoint did not register`);
+  if (result.gameplayProbe.retryClean.boss || result.gameplayProbe.retryClean.projectiles || result.gameplayProbe.retryClean.shots || result.gameplayProbe.retryClean.frostFields || result.gameplayProbe.retryClean.bodyCracks || result.gameplayProbe.retryClean.currentEvent) {
+    failures.push(`${result.viewport.name}: retry retained gameplay state`);
+  }
+  if (!result.gameplayProbe.retryClean.hasMusic) failures.push(`${result.viewport.name}: music did not restart after retry`);
   if (!result.joystick.pointerState || !result.joystick.joyBase) failures.push(`${result.viewport.name}: joystick did not activate`);
   if (!result.upgrade.reached || result.upgrade.modeAfterPick !== "playing") failures.push(`${result.viewport.name}: upgrade flow did not return to playing`);
   if (result.endingOverflow || result.overflow) failures.push(`${result.viewport.name}: UI overflow`);
