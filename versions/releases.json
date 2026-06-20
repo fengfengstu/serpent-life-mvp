@@ -5,7 +5,7 @@
       "id": "v7-art-direction",
       "label": "v7 · 原生 Canvas 统一美术方向验证",
       "sourceCommit": "e05139d",
-      "deployCommit": "pending",
+      "deployCommit": "1d1632b",
       "path": "/serpent-life-mvp/versions/v7-art-direction/",
       "notes": [
         "独立高 DPI Canvas 渲染，390 CSS px 对应 780 canvas px",
