@@ -1,6 +1,20 @@
 {
-  "latest": "v7-art-direction",
+  "latest": "v6-defold-formal",
   "releases": [
+    {
+      "id": "v6-defold-formal",
+      "label": "v6 formal · Defold 正式测试版",
+      "sourceCommit": "900acfc",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v6-defold-formal/",
+      "notes": [
+        "保留 V6 高清 PNG 资产与 Defold 1.12.4 HTML5/WASM 管线",
+        "浮动触控方向改为跟手追随，不再锁死在初始触点",
+        "修正高清 canvas 导出壳，390 CSS px 对应 780 canvas px",
+        "成长影响转向、吸附、身体碰撞、火环数量/半径、冰轨持续与 Boss 伤害",
+        "Boss 重开会清空弹幕，Boss 可被火环、冰轨和闪电伤害"
+      ]
+    },
     {
       "id": "v7-art-direction",
       "label": "v7 · 原生 Canvas 统一美术方向验证",
