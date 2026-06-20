@@ -48,6 +48,11 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.setPath("assets/generated");
     this.load.image("key-art", "serpent-life-key-art.png");
     this.load.image("asset-sheet", "serpent-life-asset-sheet.png");
+    this.load.image("remaster-head", "remaster/serpent-head.png");
+    this.load.image("remaster-body", "remaster/serpent-body.png");
+    this.load.image("remaster-enemy", "remaster/enemy-common.png");
+    this.load.image("remaster-boss", "remaster/boss-core.png");
+    this.load.image("remaster-memory", "remaster/memory-core.png");
   }
 
   create() {
@@ -267,6 +272,7 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   clearGameObjects() {
+    this.tweens.killAll();
     this.cameras.main.stopFollow();
     this.cameras.main.setScroll(0, 0);
     this.worldLayer?.removeAll(true);
@@ -314,8 +320,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.player = {
       x: GAME_CONFIG.arena / 2,
       y: GAME_CONFIG.arena / 2,
-      angle: -Math.PI / 2,
-      targetAngle: -Math.PI / 2,
+      angle: 0,
+      targetAngle: 0,
       trail: [],
       hurtMs: 0,
     };
@@ -332,7 +338,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-bg");
     this.bg.setTileScale(0.72, 0.72);
     this.arenaArt = this.add.image(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, "key-art");
-    this.arenaArt.setDisplaySize(GAME_CONFIG.arena * 0.86, GAME_CONFIG.arena).setAlpha(0.18);
+    this.arenaArt.setDisplaySize(GAME_CONFIG.arena * 0.86, GAME_CONFIG.arena).setAlpha(0.07);
     this.worldLayer.add([this.bg, this.arenaArt]);
     this.border = this.add.graphics();
     this.worldLayer.add(this.border);
@@ -341,18 +347,32 @@ class SerpentLifeScene extends Phaser.Scene {
     this.pickupLayer = this.add.container(0, 0);
     this.enemyLayer = this.add.container(0, 0);
     this.projectileLayer = this.add.container(0, 0);
-    this.worldLayer.add([this.pickupLayer, this.enemyLayer, this.projectileLayer, this.fxLayer, this.snakeLayer]);
+    this.worldLayer.add([this.pickupLayer, this.enemyLayer, this.projectileLayer]);
+    this.fxLayer.setDepth(20);
+    this.snakeLayer.setDepth(30);
 
-    this.spawnPickup("skill", this.player.x, this.player.y - 185);
+    this.spawnPickup("skill", this.player.x + 185, this.player.y);
     for (let i = 0; i < 10; i += 1) this.spawnPickup("food");
     for (let i = 0; i < 3; i += 1) this.spawnEnemy();
 
     this.buildHud();
     this.cameraTarget = this.add.zone(this.player.x, this.player.y, 1, 1);
-    this.cameras.main.startFollow(this.cameraTarget, true, 0.12, 0.12);
     this.cameras.main.setBounds(0, 0, GAME_CONFIG.arena, GAME_CONFIG.arena);
+    this.forceCameraToPlayer();
+    this.cameras.main.startFollow(this.cameraTarget, true, 0.12, 0.12);
+    this.forceCameraToPlayer();
     this.addMemory("出生时，它只有三节身体和三颗心。", "birth");
     this.updateHud();
+  }
+
+  forceCameraToPlayer() {
+    const cam = this.cameras.main;
+    const maxX = Math.max(0, GAME_CONFIG.arena - cam.width);
+    const maxY = Math.max(0, GAME_CONFIG.arena - cam.height);
+    cam.setScroll(
+      clamp(this.player.x - cam.width / 2, 0, maxX),
+      clamp(this.player.y - cam.height / 2, 0, maxY),
+    );
   }
 
   drawBorder() {
@@ -371,6 +391,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.hud = {};
     this.hud.joyBase = this.add.circle(86, height - 104, 58, 0x081315, 0.62).setStrokeStyle(3, COLORS.acid, 0.35).setScrollFactor(0);
     this.hud.joyKnob = this.add.circle(86, height - 104, 22, COLORS.acid, 0.82).setStrokeStyle(3, COLORS.gold, 0.75).setScrollFactor(0);
+    this.hud.joyBase.setVisible(false);
+    this.hud.joyKnob.setVisible(false);
     this.uiLayer.add([this.hud.joyBase, this.hud.joyKnob]);
   }
 
@@ -381,8 +403,10 @@ class SerpentLifeScene extends Phaser.Scene {
     }
     if (!this.hud) return;
     const { height } = this.viewSize();
-    this.hud.joyBase.setPosition(86, height - 104);
-    this.hud.joyKnob.setPosition(86, height - 104);
+    if (!this.pointerState) {
+      this.hud.joyBase.setPosition(86, height - 104);
+      this.hud.joyKnob.setPosition(86, height - 104);
+    }
   }
 
   pauseRun() {
@@ -404,6 +428,7 @@ class SerpentLifeScene extends Phaser.Scene {
     const ms = Math.min(delta, GAME_CONFIG.maxFrameDelta);
     const dt = ms / 1000;
     this.run.timeMs += ms;
+    if (this.run.timeMs < 120) this.forceCameraToPlayer();
     this.run.invulnMs = Math.max(0, this.run.invulnMs - ms);
     this.player.hurtMs = Math.max(0, this.player.hurtMs - ms);
 
@@ -423,7 +448,10 @@ class SerpentLifeScene extends Phaser.Scene {
   onPointerDown(pointer) {
     this.unlockAudio();
     if (this.mode !== "playing") return;
+    if (pointer.y < 150 || pointer.x > this.scale.width - 76) return;
     this.pointerState = { id: pointer.id, sx: pointer.x, sy: pointer.y };
+    this.hud?.joyBase?.setPosition(pointer.x, pointer.y).setVisible(true);
+    this.hud?.joyKnob?.setPosition(pointer.x, pointer.y).setVisible(true);
     this.updatePointerAngle(pointer);
   }
 
@@ -435,7 +463,8 @@ class SerpentLifeScene extends Phaser.Scene {
   onPointerUp(pointer) {
     if (this.pointerState?.id === pointer.id) {
       this.pointerState = null;
-      this.hud?.joyKnob?.setPosition(this.hud.joyBase.x, this.hud.joyBase.y);
+      this.hud?.joyBase?.setVisible(false);
+      this.hud?.joyKnob?.setVisible(false);
     }
   }
 
@@ -446,8 +475,8 @@ class SerpentLifeScene extends Phaser.Scene {
     const len = Math.hypot(dx, dy);
     if (len <= GAME_CONFIG.inputDeadZone) return;
     this.player.targetAngle = Math.atan2(dy, dx);
-    const cap = Math.min(46, len);
-    this.hud?.joyKnob?.setPosition(this.hud.joyBase.x + (dx / len) * cap, this.hud.joyBase.y + (dy / len) * cap);
+    const cap = Math.min(52, len);
+    this.hud?.joyKnob?.setPosition(p.sx + (dx / len) * cap, p.sy + (dy / len) * cap);
   }
 
   updatePlayer(dt) {
@@ -500,11 +529,12 @@ class SerpentLifeScene extends Phaser.Scene {
     const point = forcedX === null ? randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 220, 780) : { x: forcedX, y: forcedY };
     const x = clamp(point.x, 80, GAME_CONFIG.arena - 80);
     const y = clamp(point.y, 80, GAME_CONFIG.arena - 80);
-    const key = type === "skill" ? "skill-pickup" : "food";
     const aura = this.add.image(x, y, "snake-glow").setTint(type === "skill" ? COLORS.gold : COLORS.acid);
-    aura.setDisplaySize(type === "skill" ? 84 : 62, type === "skill" ? 84 : 62).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.24);
-    const sprite = this.add.image(x, y, key).setDisplaySize(type === "skill" ? 42 : 34, type === "skill" ? 42 : 34);
-    this.tweens.add({ targets: [aura, sprite], scale: 1.12, alpha: type === "skill" ? 0.82 : 0.72, duration: 900, yoyo: true, repeat: -1 });
+    aura.setDisplaySize(type === "skill" ? 112 : 82, type === "skill" ? 112 : 82).setBlendMode(Phaser.BlendModes.ADD).setAlpha(type === "skill" ? 0.34 : 0.24);
+    const sprite = this.add.image(x, y, "remaster-memory").setDisplaySize(type === "skill" ? 58 : 42, type === "skill" ? 58 : 42);
+    sprite.setTint(type === "skill" ? 0xffffff : 0xe9fff0);
+    this.tweens.add({ targets: aura, alpha: type === "skill" ? 0.48 : 0.34, duration: 900, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: sprite, angle: 360, duration: type === "skill" ? 4200 : 5600, repeat: -1 });
     this.pickupLayer.add([aura, sprite]);
     this.pickups.push({ type, x, y, radius: type === "skill" ? 24 : 18, sprite, aura });
   }
@@ -548,6 +578,7 @@ class SerpentLifeScene extends Phaser.Scene {
   destroyPickup(index) {
     const p = this.pickups[index];
     this.pickups.splice(index, 1);
+    this.tweens.killTweensOf([p.sprite, p.aura]);
     p.sprite.destroy();
     p.aura.destroy();
   }
@@ -618,8 +649,12 @@ class SerpentLifeScene extends Phaser.Scene {
     const kind = forceKind ?? (roll > 0.86 ? "bloomer" : roll > 0.56 ? "hunter" : "drifter");
     const spec = ENEMY_KINDS[kind];
     const point = randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 560, 840);
-    const sprite = this.add.image(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), `enemy-${kind}`);
-    sprite.setDisplaySize(spec.radius * 2.4, spec.radius * 2.4);
+    const sprite = this.add.image(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), "remaster-enemy");
+    const enemyScale = kind === "bloomer" ? 2.9 : kind === "hunter" ? 2.45 : 2.05;
+    const baseSize = spec.radius * enemyScale;
+    sprite.setDisplaySize(baseSize, baseSize);
+    if (kind === "hunter") sprite.setTint(0xffc2e3);
+    if (kind === "bloomer") sprite.setTint(0xd8b4ff);
     const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(kind === "bloomer" ? COLORS.violet : COLORS.rose);
     glow.setDisplaySize(spec.radius * 3.4, spec.radius * 3.4).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.16);
     this.enemyLayer.add([glow, sprite]);
@@ -635,6 +670,7 @@ class SerpentLifeScene extends Phaser.Scene {
       hitMs: 0,
       sprite,
       glow,
+      baseSize,
       wobble: Math.random() * TWO_PI,
     });
   }
@@ -652,7 +688,8 @@ class SerpentLifeScene extends Phaser.Scene {
       e.sprite.setPosition(e.x, e.y);
       e.glow.setPosition(e.x, e.y);
       e.sprite.rotation += dt * (e.kind === "hunter" ? 2.8 : 1.8);
-      e.sprite.setAlpha(e.hitMs > 0 ? 1 : 0.86);
+      e.sprite.setAlpha(e.hitMs > 0 ? 1 : 0.92);
+      e.sprite.setDisplaySize(e.baseSize * (e.hitMs > 0 ? 1.08 : 1), e.baseSize * (e.hitMs > 0 ? 1.08 : 1));
 
       if (distance(e, this.player) < e.radius + GAME_CONFIG.headRadius) {
         this.damagePlayer(e.kind === "bloomer" ? "swarmed" : "greed");
@@ -686,10 +723,13 @@ class SerpentLifeScene extends Phaser.Scene {
 
   spawnBoss() {
     this.run.bossSpawned = true;
-    const point = randomNear(this.player, 720, 860);
-    const sprite = this.add.image(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "boss");
-    sprite.setDisplaySize(132, 132);
-    const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(COLORS.rose).setDisplaySize(240, 240).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
+    const point = {
+      x: this.player.x + Math.cos(this.player.angle) * 330,
+      y: this.player.y + Math.sin(this.player.angle) * 330,
+    };
+    const sprite = this.add.image(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "remaster-boss");
+    sprite.setDisplaySize(210, 210);
+    const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(COLORS.rose).setDisplaySize(310, 310).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.32);
     this.enemyLayer.add([glow, sprite]);
     this.boss = {
       x: sprite.x,
@@ -990,28 +1030,43 @@ class SerpentLifeScene extends Phaser.Scene {
   drawSnake() {
     this.snakeLayer.removeAll(true);
     const hurt = this.player.hurtMs > 0;
+    const spine = this.add.graphics();
+    const points = [];
+    for (let i = 0; i < this.run.segments; i += 1) {
+      const p = this.getSegmentPoint(i);
+      if (p) points.push(p);
+    }
+    if (points.length > 1) {
+      spine.lineStyle(20, hurt ? COLORS.rose : COLORS.acid, 0.22);
+      spine.beginPath();
+      spine.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) spine.lineTo(points[i].x, points[i].y);
+      spine.strokePath();
+      spine.lineStyle(7, COLORS.cyan, 0.24);
+      spine.beginPath();
+      spine.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) spine.lineTo(points[i].x, points[i].y);
+      spine.strokePath();
+      this.snakeLayer.add(spine);
+    }
     for (let i = this.run.segments - 1; i >= 0; i -= 1) {
       const p = this.getSegmentPoint(i);
       const taper = 1 - i / (this.run.segments + 2);
       const size = i === 0 ? 25 : 14 + taper * 8;
       const alpha = i === 0 ? 1 : clamp(0.86 - i * 0.018, 0.48, 0.86);
       const glow = this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : i % 4 === 0 ? COLORS.gold : COLORS.acid);
-      glow.setDisplaySize(size * 2.6, size * 2.6).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.38 : 0.18);
-      const body = this.add.circle(p.x, p.y, size, i === 0 ? COLORS.gold : COLORS.acid, alpha);
-      body.setStrokeStyle(i === 0 ? 3 : 2, i === 0 ? COLORS.white : COLORS.cyan, i === 0 ? 0.72 : 0.22);
+      glow.setDisplaySize(size * (i === 0 ? 3.4 : 2.5), size * (i === 0 ? 3.4 : 2.5)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.45 : 0.18);
+      const body = this.add.image(p.x, p.y, i === 0 ? "remaster-head" : "remaster-body");
+      body.setRotation(p.angle ?? this.player.angle);
+      body.setDisplaySize(i === 0 ? 96 : 54 + taper * 8, i === 0 ? 96 : 40 + taper * 6);
+      body.setAlpha(alpha);
+      if (hurt && i === 0) body.setTint(0xffd7e3);
       this.snakeLayer.add([glow, body]);
       if (i > 0 && i % 4 === 0) {
-        const mem = this.add.circle(p.x, p.y, 4, COLORS.gold, 0.9);
+        const mem = this.add.image(p.x, p.y, "remaster-memory").setDisplaySize(13, 13).setAlpha(0.92);
         this.snakeLayer.add(mem);
       }
     }
-    const noseX = Math.cos(this.player.angle) * 13;
-    const noseY = Math.sin(this.player.angle) * 13;
-    const sideX = Math.cos(this.player.angle + Math.PI / 2) * 7;
-    const sideY = Math.sin(this.player.angle + Math.PI / 2) * 7;
-    const eyeA = this.add.circle(this.player.x + noseX + sideX, this.player.y + noseY + sideY, 3.5, COLORS.white, 1);
-    const eyeB = this.add.circle(this.player.x + noseX - sideX, this.player.y + noseY - sideY, 3.5, COLORS.white, 1);
-    this.snakeLayer.add([eyeA, eyeB]);
     this.snakeLayer.setDepth(10);
   }
 
