@@ -1,0 +1,86 @@
+[
+  {
+    "label": "snake-head-v5",
+    "source_cell": [
+      0,
+      0
+    ],
+    "trim_box": [
+      65,
+      80,
+      615,
+      586
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      450,
+      428
+    ]
+  },
+  {
+    "label": "snake-body-v5",
+    "source_cell": [
+      1,
+      0
+    ],
+    "trim_box": [
+      37,
+      68,
+      491,
+      627
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      390,
+      450
+    ]
+  },
+  {
+    "label": "snake-memory-v5",
+    "source_cell": [
+      0,
+      1
+    ],
+    "trim_box": [
+      139,
+      76,
+      563,
+      539
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      416,
+      450
+    ]
+  },
+  {
+    "label": "snake-tail-v5",
+    "source_cell": [
+      1,
+      1
+    ],
+    "trim_box": [
+      66,
+      0,
+      537,
+      541
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      416,
+      450
+    ]
+  }
+]
