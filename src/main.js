@@ -1084,8 +1084,8 @@ class SerpentLifeScene extends Phaser.Scene {
   damageBoss(amount, color = COLORS.acid) {
     if (!this.boss) return;
     this.boss.hp -= amount;
-      this.addSpark(this.boss.x, this.boss.y, color, 2, 0.3);
-      this.playImpact(this.boss.x, this.boss.y, color, 0.84);
+    this.addSpark(this.boss.x, this.boss.y, color, 2, 0.3);
+    this.playImpact(this.boss.x, this.boss.y, color, 0.84);
     if (this.boss.hp <= 0) {
       const { x, y } = this.boss;
       this.boss.sprite.destroy();
@@ -1205,7 +1205,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addBurst(this.player.x, this.player.y, cause === "victory" ? COLORS.gold : COLORS.rose, 210, 0.38);
 
     const result = this.makeLifeText(cause);
-    const memories = this.run.memoryTokens.slice(-8);
+    const memoryLimit = this.scale.height < 640 ? 3 : 8;
+    const memories = this.run.memoryTokens.slice(-memoryLimit);
     if (this.dom?.memoryList) {
       this.dom.memoryList.innerHTML = memories.map((m, index) => `<span style="--delay:${index * 0.12}s">${m.text}</span>`).join("");
     }
@@ -1331,31 +1332,69 @@ class SerpentLifeScene extends Phaser.Scene {
   startCombatMusic() {
     this.unlockAudio();
     if (!this.audioCtx || this.musicNodes) return;
+    this.musicStep = 0;
     const bass = this.audioCtx.createOscillator();
     const pulse = this.audioCtx.createOscillator();
+    const shimmer = this.audioCtx.createOscillator();
+    const filter = this.audioCtx.createBiquadFilter();
     const gain = this.audioCtx.createGain();
+    const shimmerGain = this.audioCtx.createGain();
     bass.type = "triangle";
     pulse.type = "square";
+    shimmer.type = "sine";
     bass.frequency.value = 55;
     pulse.frequency.value = 110;
-    gain.gain.value = 0.018;
-    bass.connect(gain);
-    pulse.connect(gain);
+    shimmer.frequency.value = 220;
+    filter.type = "lowpass";
+    filter.frequency.value = 420;
+    filter.Q.value = 0.8;
+    gain.gain.value = 0.015;
+    shimmerGain.gain.value = 0.004;
+    bass.connect(filter);
+    pulse.connect(filter);
+    filter.connect(gain);
+    shimmer.connect(shimmerGain);
+    shimmerGain.connect(gain);
     gain.connect(this.masterGain);
     bass.start();
     pulse.start();
-    this.musicNodes = { bass, pulse, gain };
+    shimmer.start();
+    const melody = [0, 7, 3, 10, 0, 12, 10, 7];
+    const timer = window.setInterval(() => this.tickCombatMusic(melody), 420);
+    this.musicNodes = { bass, pulse, shimmer, filter, gain, shimmerGain, timer };
+  }
+
+  tickCombatMusic(melody) {
+    if (!this.audioCtx || !this.musicNodes || this.mode !== "playing") return;
+    const intensity = clamp((this.run?.wave ?? 1) / 5 + (this.boss ? 0.45 : 0), 0.2, 1.4);
+    const root = this.boss ? 49 : 55;
+    const step = this.musicStep % melody.length;
+    const note = root * 2 ** (melody[step] / 12);
+    const now = this.audioCtx.currentTime;
+    this.musicNodes.bass.frequency.setTargetAtTime(root, now, 0.08);
+    this.musicNodes.pulse.frequency.setTargetAtTime(root * 2, now, 0.08);
+    this.musicNodes.filter.frequency.setTargetAtTime(360 + intensity * 360, now, 0.12);
+    this.musicNodes.gain.gain.setTargetAtTime(0.012 + intensity * 0.006, now, 0.08);
+    if (step === 0 || step === 3 || this.boss) {
+      this.tone(note, 0.11, "triangle", 0.008 + intensity * 0.004);
+    }
+    if (step % 2 === 0) {
+      this.tone(root * 0.5, 0.045, "sawtooth", 0.01 + intensity * 0.003);
+    }
+    this.musicStep += 1;
   }
 
   stopCombatMusic(fade = true) {
     if (!this.musicNodes || !this.audioCtx) return;
-    const { bass, pulse, gain } = this.musicNodes;
+    const { bass, pulse, shimmer, gain, timer } = this.musicNodes;
+    window.clearInterval(timer);
     const now = this.audioCtx.currentTime;
     gain.gain.cancelScheduledValues(now);
     gain.gain.setValueAtTime(gain.gain.value, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + (fade ? 0.35 : 0.05));
     bass.stop(now + (fade ? 0.38 : 0.08));
     pulse.stop(now + (fade ? 0.38 : 0.08));
+    shimmer.stop(now + (fade ? 0.38 : 0.08));
     this.musicNodes = null;
   }
 

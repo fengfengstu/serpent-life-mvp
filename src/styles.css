@@ -375,6 +375,48 @@ button {
   }
 }
 
+@media (max-height: 640px) {
+  .ui-menu,
+  .ui-gameover,
+  .ui-pause {
+    padding: max(8px, env(safe-area-inset-top)) 10px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .ui-ending-panel {
+    padding: 14px 14px;
+  }
+
+  .ui-title.small {
+    font-size: 25px;
+  }
+
+  .ui-memory-list {
+    gap: 5px;
+    margin: 10px 0;
+  }
+
+  .ui-memory-list span {
+    padding: 6px 8px;
+    font-size: 12px;
+    line-height: 1.28;
+  }
+
+  .ui-life-text {
+    margin: 10px 0;
+    font-size: 14px;
+    line-height: 1.42;
+  }
+
+  .ui-final {
+    margin-bottom: 10px;
+  }
+
+  .ui-button {
+    min-height: 46px;
+    font-size: 18px;
+  }
+}
+
 @media (orientation: landscape) {
   .ui-menu-panel {
     margin-top: 0;
