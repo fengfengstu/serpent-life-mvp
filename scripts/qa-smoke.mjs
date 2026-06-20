@@ -51,7 +51,20 @@ async function runViewport(browser, viewport) {
       segments: scene.run.segments,
       pickups: scene.pickups.length,
       visibleEnemies: scene.enemies.filter((e) => e.x > cam.scrollX && e.x < cam.scrollX + innerWidth && e.y > cam.scrollY && e.y < cam.scrollY + innerHeight).length,
-      textures: ["sf-enemy-idle-1", "sf-enemy-idle-4", "sf-boss-idle-1", "sf-boss-idle-9", "impact-1", "player-projectile", "enemy-projectile"].map((key) => [key, scene.textures.exists(key)]),
+      textures: [
+        "sf-enemy-idle-1",
+        "sf-enemy-idle-4",
+        "sf-boss-idle-1",
+        "sf-boss-idle-9",
+        "impact-1",
+        "player-projectile",
+        "enemy-projectile",
+        "arena-v3",
+        "snake-head-v3",
+        "snake-body-v3",
+        "snake-memory-v3",
+        "snake-tail-v3",
+      ].map((key) => [key, scene.textures.exists(key)]),
       enemyAnim: scene.enemies[0]?.sprite?.anims?.currentAnim?.key ?? null,
     };
   });

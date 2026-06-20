@@ -53,12 +53,18 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("remaster-enemy", "remaster/enemy-common.png");
     this.load.image("remaster-boss", "remaster/boss-core.png");
     this.load.image("remaster-memory", "remaster/memory-core.png");
+    this.load.image("arena-v3", "arena-v3/archive-arena-floor-v3-1024.png");
     this.load.setPath("assets/generated/sprite-forge/processed/impact");
     for (let i = 1; i <= 4; i += 1) this.load.image(`impact-${i}`, `impact-${i}.png`);
     this.load.setPath("assets/generated/sprite-forge/processed/enemy-idle-v2");
     for (let i = 1; i <= 4; i += 1) this.load.image(`sf-enemy-idle-${i}`, `idle-${i}.png`);
     this.load.setPath("assets/generated/sprite-forge/processed/boss-idle-v2");
     for (let i = 1; i <= 9; i += 1) this.load.image(`sf-boss-idle-${i}`, `idle-${i}.png`);
+    this.load.setPath("assets/generated/sprite-forge/processed/player-modules-v3");
+    this.load.image("snake-head-v3", "player-module-1.png");
+    this.load.image("snake-body-v3", "player-module-2.png");
+    this.load.image("snake-memory-v3", "player-module-3.png");
+    this.load.image("snake-tail-v3", "player-module-4.png");
   }
 
   create() {
@@ -392,11 +398,12 @@ class SerpentLifeScene extends Phaser.Scene {
     this.pointerState = null;
     this.screenShake = 0;
 
-    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-bg");
-    this.bg.setTileScale(0.72, 0.72);
-    this.arenaArt = this.add.image(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, "key-art");
-    this.arenaArt.setDisplaySize(GAME_CONFIG.arena * 0.86, GAME_CONFIG.arena).setAlpha(0.035);
-    this.worldLayer.add([this.bg, this.arenaArt]);
+    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-v3");
+    this.bg.setTileScale(1.02, 1.02);
+    this.floorShade = this.add.rectangle(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, COLORS.ink, 0.18);
+    this.arenaVeil = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-bg");
+    this.arenaVeil.setTileScale(0.72, 0.72).setAlpha(0.18).setBlendMode(Phaser.BlendModes.MULTIPLY);
+    this.worldLayer.add([this.bg, this.floorShade, this.arenaVeil]);
     this.border = this.add.graphics();
     this.worldLayer.add(this.border);
     this.drawBorder();
@@ -1161,17 +1168,17 @@ class SerpentLifeScene extends Phaser.Scene {
       if (p) points.push(p);
     }
     if (points.length > 1) {
-      spine.lineStyle(22, hurt ? COLORS.rose : COLORS.jade, 0.28);
+      spine.lineStyle(24, hurt ? COLORS.rose : COLORS.jade, hurt ? 0.18 : 0.1);
       spine.beginPath();
       spine.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i += 1) spine.lineTo(points[i].x, points[i].y);
       spine.strokePath();
-      spine.lineStyle(12, COLORS.gold, hurt ? 0.18 : 0.12);
+      spine.lineStyle(10, COLORS.gold, hurt ? 0.16 : 0.08);
       spine.beginPath();
       spine.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i += 1) spine.lineTo(points[i].x, points[i].y);
       spine.strokePath();
-      spine.lineStyle(5, COLORS.playerShot, 0.22);
+      spine.lineStyle(3, COLORS.playerShot, hurt ? 0.16 : 0.08);
       spine.beginPath();
       spine.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i += 1) spine.lineTo(points[i].x, points[i].y);
@@ -1181,33 +1188,29 @@ class SerpentLifeScene extends Phaser.Scene {
     for (let i = this.run.segments - 1; i >= 0; i -= 1) {
       const p = this.getSegmentPoint(i);
       const taper = 1 - i / (this.run.segments + 2);
-      const size = i === 0 ? 23 : 12 + taper * 7;
+      const isTail = i === this.run.segments - 1;
+      const size = i === 0 ? 23 : isTail ? 15 + taper * 4 : 12 + taper * 7;
       const alpha = i === 0 ? 1 : clamp(0.82 - i * 0.018, 0.46, 0.82);
-      const glow = this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : i % 4 === 0 ? COLORS.gold : COLORS.jade);
-      glow.setDisplaySize(size * (i === 0 ? 3.4 : 2.5), size * (i === 0 ? 3.4 : 2.5)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.45 : 0.18);
+      const isMemory = i > 0 && i % 4 === 0 && !isTail;
+      const glow = this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : isMemory ? COLORS.reward : COLORS.jade);
+      glow.setDisplaySize(size * (i === 0 ? 3.9 : 2.65), size * (i === 0 ? 3.9 : 2.65)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.5 : isMemory ? 0.24 : 0.14);
       if (i === 0) {
-        const body = this.add.image(p.x, p.y, "remaster-head");
+        const body = this.add.image(p.x, p.y, "snake-head-v3");
         body.setRotation(p.angle ?? this.player.angle);
-        body.setDisplaySize(68, 68);
+        body.setDisplaySize(74, 74);
         body.setAlpha(alpha);
-        body.setTint(hurt ? 0xffd7e3 : 0xd9fff1);
-        if (hurt) body.setTint(0xffd7e3);
-        const crown = this.add.ellipse(p.x - Math.cos(p.angle ?? this.player.angle) * 5, p.y - Math.sin(p.angle ?? this.player.angle) * 5, 18, 11, COLORS.jade, hurt ? 0.12 : 0.34);
-        crown.setRotation(p.angle ?? this.player.angle);
-        crown.setBlendMode(Phaser.BlendModes.ADD);
-        this.snakeLayer.add([glow, body, crown]);
-      } else {
-        const scaleX = 26 + taper * 8;
-        const scaleY = 18 + taper * 5;
-        const body = this.add.ellipse(p.x, p.y, scaleX, scaleY, i % 4 === 0 ? COLORS.gold : COLORS.jade, i % 4 === 0 ? 0.82 : 0.6);
-        body.setRotation(p.angle ?? this.player.angle);
-        body.setStrokeStyle(2, i % 4 === 0 ? COLORS.white : COLORS.playerShot, i % 4 === 0 ? 0.3 : 0.2);
-        body.setAlpha(alpha);
+        body.setTint(hurt ? 0xffd7e3 : 0xffffff);
         this.snakeLayer.add([glow, body]);
-        if (i % 4 === 0) {
-          const mem = this.add.image(p.x, p.y, "remaster-memory").setDisplaySize(11, 11).setAlpha(0.88);
-          this.snakeLayer.add(mem);
-        }
+      } else {
+        const texture = isTail ? "snake-tail-v3" : isMemory ? "snake-memory-v3" : "snake-body-v3";
+        const displayX = isTail ? 42 + taper * 16 : isMemory ? 38 + taper * 6 : 34 + taper * 7;
+        const displayY = isTail ? 34 + taper * 12 : isMemory ? 38 + taper * 6 : 34 + taper * 7;
+        const body = this.add.image(p.x, p.y, texture);
+        body.setDisplaySize(displayX, displayY);
+        body.setRotation((p.angle ?? this.player.angle) + (isTail ? 0 : Math.PI / 2));
+        body.setAlpha(alpha);
+        body.setTint(hurt ? 0xffd7e3 : 0xffffff);
+        this.snakeLayer.add([glow, body]);
       }
     }
     this.snakeLayer.setDepth(10);
@@ -1217,8 +1220,8 @@ class SerpentLifeScene extends Phaser.Scene {
     if (!this.dom?.hearts) return;
     const hp = Math.max(0, this.run.coreHp);
     this.dom.hearts.textContent = `${"♥".repeat(hp)}${"♡".repeat(GAME_CONFIG.initialCoreHp - hp)}`;
-    const protect = this.run.timeMs < GAME_CONFIG.lethalProtectionMs ? " · 保护中" : "";
-    this.dom.meta.textContent = `长度 ${this.run.segments}/${GAME_CONFIG.maxSegments} · ${Math.floor(this.run.timeMs / 1000)}s · 击杀 ${this.run.kills}${protect}`;
+    const protect = this.run.timeMs < GAME_CONFIG.lethalProtectionMs ? " · 保" : "";
+    this.dom.meta.textContent = `${this.run.segments}/${GAME_CONFIG.maxSegments} · ${Math.floor(this.run.timeMs / 1000)}s · ${this.run.kills}杀${protect}`;
     this.dom.skills.innerHTML = SKILLS.map((skill) => {
       const lv = this.run.skills[skill.id];
       return `<span class="${lv ? "is-on" : ""}">${skill.icon}${lv || ""}</span>`;
