@@ -55,10 +55,10 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("remaster-memory", "remaster/memory-core.png");
     this.load.setPath("assets/generated/sprite-forge/processed/impact");
     for (let i = 1; i <= 4; i += 1) this.load.image(`impact-${i}`, `impact-${i}.png`);
-    this.load.setPath("assets/generated/sprite-forge/processed/enemy-idle");
-    this.load.image("sf-enemy-idle-1", "idle-1.png");
-    this.load.setPath("assets/generated/sprite-forge/processed/boss-idle");
-    this.load.image("sf-boss-idle-1", "idle-1.png");
+    this.load.setPath("assets/generated/sprite-forge/processed/enemy-idle-v2");
+    for (let i = 1; i <= 4; i += 1) this.load.image(`sf-enemy-idle-${i}`, `idle-${i}.png`);
+    this.load.setPath("assets/generated/sprite-forge/processed/boss-idle-v2");
+    for (let i = 1; i <= 9; i += 1) this.load.image(`sf-boss-idle-${i}`, `idle-${i}.png`);
   }
 
   create() {
@@ -187,6 +187,18 @@ class SerpentLifeScene extends Phaser.Scene {
       frameRate: 18,
       repeat: 0,
       hideOnComplete: true,
+    });
+    this.anims.create({
+      key: "enemy-idle-v2",
+      frames: [1, 2, 3, 4].map((i) => ({ key: `sf-enemy-idle-${i}` })),
+      frameRate: 7,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "boss-idle-v2",
+      frames: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => ({ key: `sf-boss-idle-${i}` })),
+      frameRate: 8,
+      repeat: -1,
     });
   }
 
@@ -733,11 +745,12 @@ class SerpentLifeScene extends Phaser.Scene {
     const spec = ENEMY_KINDS[kind];
     const point = forcedPoint ?? randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 500, 780);
     const texture = "sf-enemy-idle-1";
-    const sprite = this.add.image(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), texture);
+    const sprite = this.add.sprite(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), texture);
     const baseSize = kind === "bloomer" ? 104 : kind === "hunter" ? 92 : 82;
     sprite.setDisplaySize(baseSize, baseSize);
     if (kind === "hunter") sprite.setTint(0xffc2e3);
     if (kind === "bloomer") sprite.setTint(0xd8b4ff);
+    sprite.play("enemy-idle-v2");
     const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(kind === "bloomer" ? COLORS.violet : COLORS.rose);
     glow.setDisplaySize(spec.radius * 3.4, spec.radius * 3.4).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.16);
     this.enemyLayer.add([glow, sprite]);
@@ -770,7 +783,7 @@ class SerpentLifeScene extends Phaser.Scene {
       e.y += Math.sin(angle + Math.sin(e.wobble) * 0.22) * speed * dt;
       e.sprite.setPosition(e.x, e.y);
       e.glow.setPosition(e.x, e.y);
-      e.sprite.rotation += dt * (e.kind === "hunter" ? 2.8 : 1.8);
+      e.sprite.rotation = angle + Math.PI / 2;
       e.sprite.setAlpha(e.hitMs > 0 ? 1 : 0.92);
       e.sprite.setDisplaySize(e.baseSize * (e.hitMs > 0 ? 1.08 : 1), e.baseSize * (e.hitMs > 0 ? 1.08 : 1));
 
@@ -814,8 +827,9 @@ class SerpentLifeScene extends Phaser.Scene {
       x: this.player.x + Math.cos(this.player.angle) * 330,
       y: this.player.y + Math.sin(this.player.angle) * 330,
     };
-    const sprite = this.add.image(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "sf-boss-idle-1");
+    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), "sf-boss-idle-1");
     sprite.setDisplaySize(248, 248);
+    sprite.play("boss-idle-v2");
     const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(COLORS.rose).setDisplaySize(284, 284).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
     this.enemyLayer.add([glow, sprite]);
     this.boss = {
@@ -843,8 +857,10 @@ class SerpentLifeScene extends Phaser.Scene {
     b.y += Math.sin(a) * b.speed * (b.phase === 2 ? 1.25 : 1) * dt;
     b.sprite.setPosition(b.x, b.y);
     b.glow.setPosition(b.x, b.y);
-    b.sprite.rotation += dt * 0.6;
+    const pulse = Math.sin(this.run.timeMs / 180) * (b.phase === 2 ? 7 : 4);
+    b.sprite.setDisplaySize(248 + pulse, 248 + pulse);
     b.glow.rotation -= dt * 0.5;
+    b.glow.setAlpha((b.phase === 2 ? 0.34 : 0.26) + Math.max(0, pulse) * 0.006);
 
     this.run.nextBossShotMs -= ms;
     if (this.run.nextBossShotMs <= 0) {

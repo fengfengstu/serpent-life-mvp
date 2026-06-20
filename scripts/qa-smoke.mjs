@@ -51,7 +51,8 @@ async function runViewport(browser, viewport) {
       segments: scene.run.segments,
       pickups: scene.pickups.length,
       visibleEnemies: scene.enemies.filter((e) => e.x > cam.scrollX && e.x < cam.scrollX + innerWidth && e.y > cam.scrollY && e.y < cam.scrollY + innerHeight).length,
-      textures: ["sf-enemy-idle-1", "sf-boss-idle-1", "impact-1"].map((key) => [key, scene.textures.exists(key)]),
+      textures: ["sf-enemy-idle-1", "sf-enemy-idle-4", "sf-boss-idle-1", "sf-boss-idle-9", "impact-1"].map((key) => [key, scene.textures.exists(key)]),
+      enemyAnim: scene.enemies[0]?.sprite?.anims?.currentAnim?.key ?? null,
     };
   });
   await page.screenshot({ path: `qa-smoke-${viewport.name}-first.png`, fullPage: false });
@@ -127,6 +128,7 @@ for (const result of results) {
   if (result.first.mode !== "playing") failures.push(`${result.viewport.name}: first screen not playing`);
   if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
+  if (result.first.enemyAnim !== "enemy-idle-v2") failures.push(`${result.viewport.name}: enemy animation is not v2`);
   if (!result.joystick.pointerState || !result.joystick.joyBase) failures.push(`${result.viewport.name}: joystick did not activate`);
   if (!result.upgrade.reached || result.upgrade.modeAfterPick !== "playing") failures.push(`${result.viewport.name}: upgrade flow did not return to playing`);
   if (result.endingOverflow || result.overflow) failures.push(`${result.viewport.name}: UI overflow`);
