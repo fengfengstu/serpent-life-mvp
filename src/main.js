@@ -46,31 +46,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("snake-glow", "snake-glow.png");
     this.load.image("energy-bloom", "energy-bloom.png");
     this.load.image("spark", "spark.png");
-    this.load.setPath("assets/generated");
-    this.load.image("key-art", "serpent-life-key-art.png");
-    this.load.image("asset-sheet", "serpent-life-asset-sheet.png");
-    this.load.image("remaster-head", "remaster/serpent-head.png");
-    this.load.image("remaster-body", "remaster/serpent-body.png");
-    this.load.image("remaster-enemy", "remaster/enemy-common.png");
-    this.load.image("remaster-boss", "remaster/boss-core.png");
-    this.load.image("remaster-memory", "remaster/memory-core.png");
-    this.load.image("arena-v3", "arena-v3/archive-arena-floor-v3-1024.png");
     this.load.setPath("assets/generated/sprite-forge/processed/impact");
     for (let i = 1; i <= 4; i += 1) this.load.image(`impact-${i}`, `impact-${i}.png`);
-    this.load.setPath("assets/generated/sprite-forge/processed/enemy-idle-v2");
-    for (let i = 1; i <= 4; i += 1) this.load.image(`sf-enemy-idle-${i}`, `idle-${i}.png`);
-    this.load.setPath("assets/generated/sprite-forge/processed/boss-idle-v2");
-    for (let i = 1; i <= 9; i += 1) this.load.image(`sf-boss-idle-${i}`, `idle-${i}.png`);
-    this.load.setPath("assets/generated/sprite-forge/processed/player-modules-v3");
-    this.load.image("snake-head-v3", "player-module-1.png");
-    this.load.image("snake-body-v3", "player-module-2.png");
-    this.load.image("snake-memory-v3", "player-module-3.png");
-    this.load.image("snake-tail-v3", "player-module-4.png");
-    this.load.setPath("assets/generated/sprite-forge/processed/skill-vfx-v4");
-    this.load.image("vfx-fire-ring-v4", "skill-vfx-1.png");
-    this.load.image("vfx-frost-field-v4", "skill-vfx-2.png");
-    this.load.image("vfx-shield-star-v4", "skill-vfx-3.png");
-    this.load.image("vfx-lightning-core-v4", "skill-vfx-4.png");
     this.load.setPath("assets/generated/v5-hd/processed/arena");
     this.load.image("arena-v5", "arena-floor-v5-2048.png");
     this.load.setPath("assets/generated/v5-hd/processed/serpent");
@@ -262,18 +239,6 @@ class SerpentLifeScene extends Phaser.Scene {
       frameRate: 18,
       repeat: 0,
       hideOnComplete: true,
-    });
-    this.anims.create({
-      key: "enemy-idle-v2",
-      frames: [1, 2, 3, 4].map((i) => ({ key: `sf-enemy-idle-${i}` })),
-      frameRate: 7,
-      repeat: -1,
-    });
-    this.anims.create({
-      key: "boss-idle-v2",
-      frames: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => ({ key: `sf-boss-idle-${i}` })),
-      frameRate: 8,
-      repeat: -1,
     });
   }
 
