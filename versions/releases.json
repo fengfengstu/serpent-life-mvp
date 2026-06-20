@@ -5,7 +5,7 @@
       "id": "v6-defold-spike",
       "label": "v6 · Defold HTML5/WASM 技术验证",
       "sourceCommit": "6a391de",
-      "deployCommit": "pending",
+      "deployCommit": "761b139",
       "path": "/serpent-life-mvp/versions/v6-defold-spike/",
       "notes": [
         "真正切换到 Defold 1.12.4 HTML5/WASM",
