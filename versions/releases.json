@@ -1,6 +1,21 @@
 {
-  "latest": "v5-fork-roguelike-remix",
+  "latest": "v8-audio-visual-overhaul",
   "releases": [
+    {
+      "id": "v8-audio-visual-overhaul",
+      "label": "v8 · 音画重制强化版",
+      "sourceCommit": "97244b3",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v8-audio-visual-overhaul/",
+      "notes": [
+        "主 BGM 替换为更强存在感的 Fast Fight 战斗循环曲，音量提升到可感知战斗层级",
+        "接入 OpenGameArt 火环 spritesheet，火系技能拥有更明显的常驻光环和爆燃 tick",
+        "接入 OpenGameArt 闪电贴图，并与程序电弧混合，增强雷链质感但降低遮挡",
+        "给蛇主体增加暗金骨冠、眼光、脊线鳞片和记忆节点覆盖层，强化角色方向和材质感",
+        "新增 V8 Art Bible / Prompt Pack，明确对标 Hades、Blasphemous、Darkest Dungeon、Ori 的 2D 标准",
+        "烟测新增 V8 BGM 路径、音量、火环 spritesheet、闪电贴图和高清资源检查"
+      ]
+    },
     {
       "id": "v5-fork-roguelike-remix",
       "label": "v5 fork · Roguelike Remix 强化版",
