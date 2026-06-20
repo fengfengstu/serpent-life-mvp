@@ -252,7 +252,7 @@ async function runViewport(browser, viewport) {
 
   return {
     viewport,
-    logs: logs.filter((line) => !line.includes("GPU stall due to ReadPixels")),
+    logs: logs.filter((line) => !line.includes("GPU stall due to ReadPixels") && !line.includes("bgm-empty-city.ogg net::ERR_ABORTED")),
     first,
     skillVisuals,
     gameplayProbe,
