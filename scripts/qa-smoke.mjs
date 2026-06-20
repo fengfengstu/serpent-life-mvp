@@ -221,6 +221,11 @@ async function runViewport(browser, viewport) {
     await page.waitForTimeout(800);
     await page.locator(".ui-card").first().tap();
     await page.waitForTimeout(700);
+    if ((await page.evaluate(() => window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene.mode)) === "upgrade" && (await page.locator(".ui-card").count()) > 0) {
+      await page.waitForTimeout(800);
+      await page.locator(".ui-card").first().tap();
+      await page.waitForTimeout(500);
+    }
     upgrade = await page.evaluate(() => {
       const scene = window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene;
       return { reached: true, modeAfterPick: scene.mode, skills: scene.run.skills, hasMusic: !!scene.musicNodes };
