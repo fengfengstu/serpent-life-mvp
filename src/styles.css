@@ -80,7 +80,7 @@ button {
   width: min(378px, calc(100vw - 30px));
   max-height: calc(100dvh - 28px);
   overflow: auto;
-  border: 1px solid rgba(231, 255, 200, 0.34);
+  border: 1px solid rgba(255, 209, 102, 0.32);
   border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(16, 28, 30, 0.92), rgba(7, 10, 14, 0.96)),
@@ -97,7 +97,7 @@ button {
 
 .ui-kicker {
   margin: 0 0 8px;
-  color: #a7ff65;
+  color: #ffd166;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 0;
@@ -132,11 +132,11 @@ button {
   margin-top: 10px;
   border: 1px solid rgba(255, 248, 208, 0.68);
   border-radius: 8px;
-  background: linear-gradient(180deg, #a7ff65, #3fb35c);
-  color: #06210c;
+  background: linear-gradient(180deg, #ffd166, #8ea14d);
+  color: #141105;
   font-size: 20px;
   font-weight: 900;
-  box-shadow: 0 8px 0 rgba(17, 74, 33, 0.86);
+  box-shadow: 0 8px 0 rgba(62, 58, 22, 0.86);
 }
 
 .ui-button.ghost {
@@ -147,7 +147,7 @@ button {
 
 .ui-button:active {
   transform: translateY(3px);
-  box-shadow: 0 5px 0 rgba(17, 74, 33, 0.86);
+  box-shadow: 0 5px 0 rgba(62, 58, 22, 0.86);
 }
 
 .ui-hud {
