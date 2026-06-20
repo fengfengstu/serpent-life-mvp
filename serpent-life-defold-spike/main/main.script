@@ -1,6 +1,13 @@
 local W = 390
 local H = 844
 local TWO_PI = math.pi * 2
+local MAX_LENGTH = 25
+local SEGMENT_POOL = 25
+local ENEMY_POOL = 14
+local PICKUP_POOL = 6
+local FIRE_POOL = 8
+local FROST_POOL = 8
+local BOSS_BULLET_POOL = 10
 
 local function clamp(v, lo, hi)
 	return math.max(lo, math.min(hi, v))
@@ -40,15 +47,15 @@ end
 
 local function edge_spawn()
 	local side = math.random(1, 4)
-	if side == 1 then return { x = -42, y = math.random(80, H - 80) } end
-	if side == 2 then return { x = W + 42, y = math.random(80, H - 80) } end
-	if side == 3 then return { x = math.random(40, W - 40), y = -42 } end
-	return { x = math.random(40, W - 40), y = H + 42 }
+	if side == 1 then return { x = -48, y = math.random(92, H - 86) } end
+	if side == 2 then return { x = W + 48, y = math.random(92, H - 86) } end
+	if side == 3 then return { x = math.random(44, W - 44), y = -48 } end
+	return { x = math.random(44, W - 44), y = H + 48 }
 end
 
 local function reset_pickup(self, p)
 	p.x = math.random(52, W - 52)
-	p.y = math.random(130, H - 78)
+	p.y = math.random(126, H - 82)
 	p.on = true
 end
 
@@ -56,62 +63,110 @@ local function reset_enemy(self, e)
 	local p = edge_spawn()
 	e.x = p.x
 	e.y = p.y
-	e.hp = e.kind == 3 and 7 or e.kind == 2 and 4 or 2
-	e.speed = e.kind == 3 and 44 or e.kind == 2 and 78 or 58
+	e.hp = e.kind == 3 and 9 or e.kind == 2 and 5 or 3
+	e.speed = e.kind == 3 and 48 or e.kind == 2 and 82 or 62
 	e.on = true
 	e.slow = 0
+	e.hit = 0
+end
+
+local function reset_boss_bullets(self)
+	self.boss_bullets = {}
+	for i = 1, BOSS_BULLET_POOL do
+		self.boss_bullets[i] = { id = "boss_bullet_" .. i, on = false, x = -500, y = -500, vx = 0, vy = 0, life = 0 }
+		hide(self.boss_bullets[i].id)
+	end
+end
+
+local function hide_boss(self)
+	hide("boss")
+	for _, b in ipairs(self.boss_bullets or {}) do
+		b.on = false
+		hide(b.id)
+	end
 end
 
 local function restart(self)
 	self.mode = "playing"
 	self.time = 0
-	self.hp = 3
+	self.hp = 6
+	self.hurt_cd = 0
 	self.length = 5
 	self.score = 0
+	self.kill_count = 0
 	self.fire_level = 1
 	self.frost_level = 1
-	self.fire_cd = 0.6
-	self.frost_cd = 0.2
-	self.player = { x = W * 0.5, y = H * 0.5, angle = 0, target = 0 }
+	self.fire_cd = 0.35
+	self.frost_cd = 0.05
+	self.boss_active = false
+	self.boss_dead = false
+	self.boss = { x = W * 0.5, y = H + 96, hp = 210, max_hp = 210, shot_cd = 1.2, pulse = 0 }
+	self.player = { x = W * 0.5, y = H * 0.47, angle = 0, target = 0 }
 	self.trail = {}
 	self.drag = nil
-	for i = 1, 260 do
+	for i = 1, 420 do
 		self.trail[i] = { x = self.player.x - i * 2, y = self.player.y, angle = 0 }
 	end
 	self.enemies = {}
-	for i = 1, 10 do
+	for i = 1, ENEMY_POOL do
 		self.enemies[i] = { id = "enemy_" .. i, kind = (i % 3) + 1, on = true }
 		reset_enemy(self, self.enemies[i])
 	end
 	self.pickups = {}
-	for i = 1, 5 do
+	for i = 1, PICKUP_POOL do
 		self.pickups[i] = { id = "pickup_" .. i, on = true }
 		reset_pickup(self, self.pickups[i])
 	end
 	self.fire = {}
-	for i = 1, 4 do self.fire[i] = { id = "fire_" .. i, life = 0 } end
+	for i = 1, FIRE_POOL do self.fire[i] = { id = "fire_" .. i, life = 0, radius = 0, damage = 0 } end
 	self.frost = {}
-	for i = 1, 6 do self.frost[i] = { id = "frost_" .. i, life = 0 } end
+	for i = 1, FROST_POOL do self.frost[i] = { id = "frost_" .. i, life = 0, radius = 0 } end
+	reset_boss_bullets(self)
+	hide_boss(self)
+	for i = 1, SEGMENT_POOL do hide("segment_" .. i) end
+end
+
+local function damage_boss(self, amount)
+	if not self.boss_active or self.boss_dead then return end
+	self.boss.hp = self.boss.hp - amount
+	self.boss.pulse = 0.18
+	if self.boss.hp <= 0 then
+		self.boss_dead = true
+		self.boss_active = false
+		self.score = self.score + 20
+		self.fire_level = self.fire_level + 2
+		self.frost_level = self.frost_level + 2
+		hide_boss(self)
+	end
+end
+
+local function kill_enemy(self, e)
+	self.kill_count = self.kill_count + 1
+	self.score = self.score + 1
+	reset_enemy(self, e)
 end
 
 local function trigger_fire(self)
-	local count = math.min(4, 1 + math.floor(self.length / 4))
+	local count = math.min(FIRE_POOL, 2 + math.floor(self.length / 3))
+	local base_radius = 58 + self.fire_level * 8 + self.length * 0.9
 	for i = 1, count do
 		local fx = self.fire[i]
-		local idx = 1 + (i - 1) * 18
+		local idx = 1 + (i - 1) * 12
 		local p = self.trail[idx] or self.player
 		fx.x = p.x
 		fx.y = p.y
-		fx.life = 0.42
-		fx.radius = 64 + self.fire_level * 8
+		fx.life = 0.62
+		fx.radius = base_radius
+		fx.damage = 2.0 + self.fire_level * 0.55 + self.length * 0.08
 		for _, e in ipairs(self.enemies) do
 			if e.on and dist(fx, e) < fx.radius then
-				e.hp = e.hp - (1.8 + self.fire_level * 0.5)
-				if e.hp <= 0 then
-					self.score = self.score + 1
-					reset_enemy(self, e)
-				end
+				e.hp = e.hp - fx.damage
+				e.hit = 0.12
+				if e.hp <= 0 then kill_enemy(self, e) end
 			end
+		end
+		if self.boss_active and dist(fx, self.boss) < fx.radius + 54 then
+			damage_boss(self, 4.5 + self.fire_level * 1.15 + self.length * 0.18)
 		end
 	end
 end
@@ -126,18 +181,55 @@ local function trigger_frost(self)
 		end
 	end
 	local f = self.frost[slot]
-	f.x = self.player.x
-	f.y = self.player.y
+	local tail = self.trail[math.min(#self.trail, 28 + self.length * 2)] or self.player
+	f.x = tail.x
+	f.y = tail.y
 	f.angle = self.player.angle
-	f.life = 1.4
-	f.radius = 48
+	f.life = 1.35 + self.frost_level * 0.12 + self.length * 0.018
+	f.max_life = f.life
+	f.radius = 44 + self.frost_level * 5 + self.length * 0.35
+end
+
+local function spawn_boss(self)
+	self.boss_active = true
+	self.boss_dead = false
+	self.boss.x = W * 0.5
+	self.boss.y = H + 90
+	self.boss.max_hp = 210 + self.length * 4
+	self.boss.hp = self.boss.max_hp
+	self.boss.shot_cd = 1.35
+	self.boss.pulse = 0
+	reset_boss_bullets(self)
+end
+
+local function spawn_boss_shots(self)
+	local shots = 3
+	local aim = angle_to(self.boss, self.player)
+	for s = 1, shots do
+		local slot = nil
+		for _, b in ipairs(self.boss_bullets) do
+			if not b.on then
+				slot = b
+				break
+			end
+		end
+		if slot then
+			local spread = (s - 2) * 0.32
+			local a = aim + spread
+			slot.on = true
+			slot.x = self.boss.x
+			slot.y = self.boss.y - 18
+			slot.vx = math.cos(a) * 130
+			slot.vy = math.sin(a) * 130
+			slot.life = 4.0
+		end
+	end
 end
 
 function init(self)
 	math.randomseed(os.time())
 	msg.post(".", "acquire_input_focus")
 	place("bg", W * 0.5, H * 0.5, 0.43, 0)
-	place("boss", W * 0.5, H * 0.92, 0.001, 0)
 	place("shield", -500, -500, 0.001, 0)
 	place("lightning", -500, -500, 0.001, 0)
 	restart(self)
@@ -146,30 +238,33 @@ end
 function update(self, dt)
 	if self.mode ~= "playing" then
 		self.time = self.time + dt
-		place("boss", W * 0.5, H * 0.52, 0.36 + math.sin(self.time * 6) * 0.02, 0)
+		hide_boss(self)
 		return
 	end
 
 	self.time = self.time + dt
+	self.hurt_cd = math.max(0, (self.hurt_cd or 0) - dt)
 	if self.player.x > W - 58 then self.player.target = math.pi end
 	if self.player.x < 58 then self.player.target = 0 end
 	if self.player.y > H - 72 then self.player.target = -math.pi * 0.5 end
 	if self.player.y < 112 then self.player.target = math.pi * 0.5 end
-	local turn = 8.0
+
+	local length_burden = math.max(0, self.length - 5)
+	local turn = math.max(3.8, 8.6 - length_burden * 0.15)
 	self.player.angle = lerp_angle(self.player.angle, self.player.target, clamp(turn * dt, 0, 1))
-	local speed = 124 + math.min(26, self.score * 0.6)
-	self.player.x = clamp(self.player.x + math.cos(self.player.angle) * speed * dt, 32, W - 32)
-	self.player.y = clamp(self.player.y + math.sin(self.player.angle) * speed * dt, 84, H - 36)
+	local speed = 128 + math.min(28, self.score * 0.45) - length_burden * 0.65
+	self.player.x = clamp(self.player.x + math.cos(self.player.angle) * speed * dt, 34, W - 34)
+	self.player.y = clamp(self.player.y + math.sin(self.player.angle) * speed * dt, 88, H - 40)
 
 	table.insert(self.trail, 1, { x = self.player.x, y = self.player.y, angle = self.player.angle })
-	while #self.trail > 260 do table.remove(self.trail) end
+	while #self.trail > 420 do table.remove(self.trail) end
 
-	place("snake_head", self.player.x, self.player.y, 0.15, self.player.angle)
-	for i = 1, 12 do
+	place("snake_head", self.player.x, self.player.y, 0.158, self.player.angle)
+	for i = 1, SEGMENT_POOL do
 		if i <= self.length then
-			local p = self.trail[1 + i * 11] or self.player
-			local taper = 1 - i / 15
-			place("segment_" .. i, p.x, p.y, 0.07 + taper * 0.018, p.angle + math.pi * 0.5)
+			local p = self.trail[1 + i * 10] or self.player
+			local taper = clamp(1 - i / (MAX_LENGTH + 5), 0.25, 1)
+			place("segment_" .. i, p.x, p.y, 0.066 + taper * 0.025, p.angle + math.pi * 0.5)
 		else
 			hide("segment_" .. i)
 		end
@@ -177,9 +272,15 @@ function update(self, dt)
 
 	for _, p in ipairs(self.pickups) do
 		if p.on then
-			place(p.id, p.x, p.y, 0.075 + math.sin(self.time * 6) * 0.006, self.time)
-			if dist(self.player, p) < 34 then
-				self.length = math.min(12, self.length + 1)
+			local magnet = 32 + math.min(34, self.length * 1.25)
+			local d = dist(self.player, p)
+			if d < magnet and d > 2 then
+				p.x = p.x + (self.player.x - p.x) * dt * 5.2
+				p.y = p.y + (self.player.y - p.y) * dt * 5.2
+			end
+			place(p.id, p.x, p.y, 0.078 + math.sin(self.time * 7) * 0.009, self.time * 1.6)
+			if d < 30 then
+				self.length = math.min(MAX_LENGTH, self.length + 1)
 				self.score = self.score + 1
 				if self.score % 3 == 0 then self.fire_level = self.fire_level + 1 end
 				if self.score % 4 == 0 then self.frost_level = self.frost_level + 1 end
@@ -192,42 +293,72 @@ function update(self, dt)
 
 	for _, e in ipairs(self.enemies) do
 		local a = angle_to(e, self.player)
-		local slow = e.slow > 0 and 0.46 or 1
+		local slow = e.slow > 0 and 0.42 or 1
 		e.slow = math.max(0, e.slow - dt)
+		e.hit = math.max(0, (e.hit or 0) - dt)
 		e.x = e.x + math.cos(a) * e.speed * slow * dt
 		e.y = e.y + math.sin(a) * e.speed * slow * dt
-		local scale = e.kind == 3 and 0.15 or e.kind == 2 and 0.13 or 0.105
+
+		for s = 3, self.length, 3 do
+			local p = self.trail[1 + s * 10]
+			if p and dist(p, e) < 20 then
+				e.hp = e.hp - (0.85 + self.length * 0.012)
+				e.slow = 0.24
+				e.hit = 0.1
+				if e.hp <= 0 then
+					kill_enemy(self, e)
+					break
+				end
+			end
+		end
+
+		local scale = e.kind == 3 and 0.158 or e.kind == 2 and 0.136 or 0.112
+		if e.hit and e.hit > 0 then scale = scale * 1.18 end
 		place(e.id, e.x, e.y, scale, a)
-		if dist(self.player, e) < 30 then
+		if dist(self.player, e) < 30 and self.hurt_cd <= 0 then
 			self.hp = self.hp - 1
+			self.hurt_cd = 0.72
 			reset_enemy(self, e)
 			if self.hp <= 0 then
 				self.mode = "dead"
 				for _, enemy in ipairs(self.enemies) do hide(enemy.id) end
-				for _, p in ipairs(self.pickups) do hide(p.id) end
+				for _, pick in ipairs(self.pickups) do hide(pick.id) end
+				hide_boss(self)
 				return
 			end
 		end
 	end
 
+	if not self.boss_active and not self.boss_dead and (self.score >= 16 or self.time >= 48) then
+		spawn_boss(self)
+	end
+
 	self.fire_cd = self.fire_cd - dt
 	if self.fire_cd <= 0 then
-		self.fire_cd = math.max(0.34, 0.88 - self.fire_level * 0.06)
+		self.fire_cd = math.max(0.28, 0.78 - self.fire_level * 0.045 - self.length * 0.006)
 		trigger_fire(self)
 	end
 
 	self.frost_cd = self.frost_cd - dt
 	if self.frost_cd <= 0 then
-		self.frost_cd = 0.42
+		self.frost_cd = math.max(0.32, 0.48 - self.frost_level * 0.012)
 		trigger_frost(self)
 	end
 
 	for _, f in ipairs(self.frost) do
 		if f.life > 0 then
 			f.life = f.life - dt
-			place(f.id, f.x, f.y, 0.18 * clamp(f.life, 0, 1), f.angle + self.time * 0.5)
+			local ratio = clamp(f.life / (f.max_life or 1), 0, 1)
+			place(f.id, f.x, f.y, 0.22 * ratio + 0.04, f.angle + self.time * 0.8)
 			for _, e in ipairs(self.enemies) do
-				if dist(f, e) < f.radius then e.slow = 0.5 end
+				if dist(f, e) < f.radius then
+					e.slow = 0.65
+					e.hp = e.hp - (0.75 + self.frost_level * 0.08) * dt
+					if e.hp <= 0 then kill_enemy(self, e) end
+				end
+			end
+			if self.boss_active and dist(f, self.boss) < f.radius + 62 then
+				damage_boss(self, (2.2 + self.frost_level * 0.35) * dt)
 			end
 		else
 			hide(f.id)
@@ -237,16 +368,64 @@ function update(self, dt)
 	for _, f in ipairs(self.fire) do
 		if f.life > 0 then
 			f.life = f.life - dt
-			place(f.id, f.x, f.y, 0.22 * clamp(f.life * 2.2, 0, 1), self.time * 4)
+			place(f.id, f.x, f.y, 0.32 * clamp(f.life * 1.9, 0, 1), self.time * 5.6)
 		else
 			hide(f.id)
 		end
 	end
 
-	place("shield", self.player.x + math.cos(self.time * 5) * 44, self.player.y + math.sin(self.time * 5) * 44, 0.08, -self.time * 5)
-	local lp = self.trail[44] or self.player
-	place("lightning", lp.x, lp.y, 0.09 + math.sin(self.time * 12) * 0.012, -self.time * 4)
-	hide("boss")
+	if self.boss_active then
+		local target_y = H - 126 + math.sin(self.time * 1.1) * 24
+		self.boss.x = clamp(self.boss.x + (self.player.x - self.boss.x) * dt * 0.55, 74, W - 74)
+		self.boss.y = clamp(self.boss.y + (target_y - self.boss.y) * dt * 0.85, H - 168, H - 92)
+		self.boss.pulse = math.max(0, self.boss.pulse - dt)
+		local boss_scale = 0.30 + (1 - self.boss.hp / self.boss.max_hp) * 0.055
+		if self.boss.pulse > 0 then boss_scale = boss_scale * 1.16 end
+		place("boss", self.boss.x, self.boss.y, boss_scale, self.time * 0.25)
+
+		self.boss.shot_cd = self.boss.shot_cd - dt
+		if self.boss.shot_cd <= 0 then
+			self.boss.shot_cd = math.max(0.7, 1.45 - self.time * 0.004)
+			spawn_boss_shots(self)
+		end
+	else
+		hide("boss")
+	end
+
+	for _, b in ipairs(self.boss_bullets) do
+		if b.on then
+			b.life = b.life - dt
+			b.x = b.x + b.vx * dt
+			b.y = b.y + b.vy * dt
+			place(b.id, b.x, b.y, 0.076 + math.sin(self.time * 18) * 0.008, self.time * 7)
+			if dist(self.player, b) < 24 and self.hurt_cd <= 0 then
+				self.hp = self.hp - 1
+				self.hurt_cd = 0.72
+				b.on = false
+				hide(b.id)
+				if self.hp <= 0 then
+					self.mode = "dead"
+					hide_boss(self)
+					return
+				end
+			elseif b.life <= 0 or b.x < -80 or b.x > W + 80 or b.y < -80 or b.y > H + 80 then
+				b.on = false
+				hide(b.id)
+			end
+		else
+			hide(b.id)
+		end
+	end
+
+	place("shield", self.player.x + math.cos(self.time * 5.4) * (42 + self.length * 0.4), self.player.y + math.sin(self.time * 5.4) * (42 + self.length * 0.4), 0.092, -self.time * 5.4)
+	local lp = self.trail[42] or self.player
+	if self.boss_active then
+		local pulse = 0.12 + math.sin(self.time * 16) * 0.015
+		place("lightning", (lp.x + self.boss.x) * 0.5, (lp.y + self.boss.y) * 0.5, pulse, angle_to(lp, self.boss))
+		damage_boss(self, (1.5 + self.length * 0.035) * dt)
+	else
+		place("lightning", lp.x, lp.y, 0.104 + math.sin(self.time * 12) * 0.015, -self.time * 4)
+	end
 end
 
 function on_input(self, action_id, action)
