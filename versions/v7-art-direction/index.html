@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>此生为蛇 · V7 Art Direction</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #05090b; touch-action: none; font-family: Arial, "PingFang SC", sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    .hud { position: fixed; left: 10px; right: 10px; top: max(10px, env(safe-area-inset-top)); color: #fff8d0; pointer-events: none; display: flex; justify-content: space-between; gap: 10px; font-weight: 800; text-shadow: 0 2px 10px #000; }
+    .hud span { padding: 8px 10px; border: 1px solid rgba(255,209,102,.22); border-radius: 8px; background: rgba(5,12,14,.62); backdrop-filter: blur(6px); }
+    .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(3,7,9,.72); color: #fff8d0; }
+    .panel { width: min(360px, calc(100vw - 28px)); border: 1px solid rgba(255,209,102,.32); border-radius: 8px; background: linear-gradient(180deg, rgba(13,28,28,.94), rgba(5,8,11,.98)); padding: 20px; box-shadow: 0 24px 80px rgba(0,0,0,.55); }
+    h1 { margin: 0 0 8px; font-size: 38px; line-height: 1; }
+    p { margin: 0 0 16px; color: #cfe3d8; line-height: 1.55; }
+    button { width: 100%; min-height: 52px; border-radius: 8px; border: 1px solid #fff8d0; background: linear-gradient(180deg, #ffd166, #8fa24e); color: #151307; font: 900 20px Arial, sans-serif; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud">
+    <span id="life">♥♥♥♥</span>
+    <span id="meta">长度 5 · 0s</span>
+    <span id="phase">觉醒前</span>
+  </div>
+  <div id="overlay" class="overlay">
+    <div class="panel">
+      <h1>此生为蛇</h1>
+      <p>V7 统一美术方向验证。技能从蛇身路径生成：火是脊骨燃烧，冰是尾迹冷雾，电是记忆节点之间的跳跃。</p>
+      <button id="start">开始测试</button>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const overlay = document.getElementById("overlay");
+    const lifeEl = document.getElementById("life");
+    const metaEl = document.getElementById("meta");
+    const phaseEl = document.getElementById("phase");
+    const TAU = Math.PI * 2;
+    const C = {
+      ink:"#05090b", floor:"#0b1718", line:"#264347", jade:"#38d99b", gold:"#ffd166",
+      amber:"#ffb238", fire:"#ff6a2a", fire2:"#ffcf67", frost:"#83edff", rose:"#ff4fa1",
+      violet:"#8f6dff", white:"#f6fff7", red:"#ff405d"
+    };
+    let dpr = 1, W = 390, H = 844, last = 0, running = false;
+    let pointer = null;
+    const state = {};
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 3);
+      W = Math.floor(innerWidth);
+      H = Math.floor(innerHeight);
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    addEventListener("resize", resize);
+    resize();
+
+    function reset() {
+      Object.assign(state, {
+        t:0, hp:4, length:5, score:0, kills:0, level:1, gameover:false,
+        player:{x:W*.5,y:H*.58,a:-.2,target:-.2,speed:138},
+        trail:[], enemies:[], pickups:[], frost:[], fire:[], bolts:[], boss:null, bullets:[], hurt:0
+      });
+      for (let i=0;i<260;i++) state.trail.push({x:state.player.x-i*2,y:state.player.y,a:state.player.a});
+      for (let i=0;i<5;i++) spawnEnemy();
+      for (let i=0;i<7;i++) spawnPickup();
+      running = true;
+      overlay.classList.add("hidden");
+    }
+
+    document.getElementById("start").onclick = reset;
+    canvas.addEventListener("pointerdown", e => { if (state.gameover) return reset(); pointer={x:e.clientX,y:e.clientY}; steer(e); });
+    canvas.addEventListener("pointermove", steer);
+    canvas.addEventListener("pointerup", () => pointer=null);
+    function steer(e) {
+      if (!pointer || !running) return;
+      const dx=e.clientX-pointer.x, dy=e.clientY-pointer.y;
+      if (Math.hypot(dx,dy)>5) state.player.target = Math.atan2(dy,dx);
+    }
+
+    function spawnEnemy() {
+      const side = Math.floor(Math.random()*4);
+      const p = side===0 ? {x:-40,y:Math.random()*H} : side===1 ? {x:W+40,y:Math.random()*H} : side===2 ? {x:Math.random()*W,y:-40} : {x:Math.random()*W,y:H+40};
+      const kind = Math.random()>.78 ? 2 : Math.random()>.48 ? 1 : 0;
+      state.enemies.push({ ...p, kind, hp: kind===2?9:kind===1?5:3, r: kind===2?24:kind===1?19:16, s: kind===1?86:kind===2?50:66, slow:0, hit:0, wob:Math.random()*TAU });
+    }
+    function spawnPickup() {
+      state.pickups.push({ x:50+Math.random()*(W-100), y:110+Math.random()*(H-170), r:15, pulse:Math.random()*TAU });
+    }
+
+    function tick(ts) {
+      const dt = Math.min(0.034, (ts-last)/1000 || 0.016); last = ts;
+      if (running && !state.gameover) update(dt);
+      draw();
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    function update(dt) {
+      state.t += dt; state.hurt = Math.max(0, state.hurt-dt);
+      const p = state.player;
+      let da = ((p.target-p.a+Math.PI)%TAU)-Math.PI; if (da<-Math.PI) da+=TAU;
+      if (p.x > W - 58) p.target = Math.PI;
+      if (p.x < 58) p.target = 0;
+      if (p.y > H - 72) p.target = -Math.PI / 2;
+      if (p.y < 112) p.target = Math.PI / 2;
+      p.a += da * Math.min(1, dt*(7.5-(state.length-5)*.09));
+      p.x = Math.max(34, Math.min(W-34, p.x + Math.cos(p.a)*p.speed*dt));
+      p.y = Math.max(84, Math.min(H-38, p.y + Math.sin(p.a)*p.speed*dt));
+      state.trail.unshift({x:p.x,y:p.y,a:p.a}); state.trail.length = 360;
+
+      if (state.pickups.length < 8 && Math.random()<dt*.7) spawnPickup();
+      for (let i=state.pickups.length-1;i>=0;i--) {
+        const q=state.pickups[i], d=dist(p,q), mag=42+state.length*2.1;
+        if (d<mag) { q.x+=(p.x-q.x)*dt*5; q.y+=(p.y-q.y)*dt*5; }
+        if (d<27) { state.pickups.splice(i,1); state.length=Math.min(25,state.length+1); state.score+=12; state.level=1+Math.floor(state.length/5); state.fire.push({x:p.x,y:p.y,r:24,life:.5}); }
+      }
+
+      if (state.enemies.length < 10 + Math.floor(state.t/18)*2 && Math.random()<dt*1.5) spawnEnemy();
+      for (let i=state.enemies.length-1;i>=0;i--) {
+        const e=state.enemies[i]; e.wob+=dt*3; e.hit=Math.max(0,e.hit-dt); e.slow=Math.max(0,e.slow-dt);
+        const a=Math.atan2(p.y-e.y,p.x-e.x)+Math.sin(e.wob)*.18, speed=e.s*(e.slow?0.42:1);
+        e.x+=Math.cos(a)*speed*dt; e.y+=Math.sin(a)*speed*dt;
+        for (let s=2;s<state.length;s+=3) {
+          const b=seg(s); if (dist(e,b)<e.r+13) { e.hp-=dt*(2+state.length*.08); e.slow=.18; e.hit=.12; }
+        }
+        if (dist(e,p)<e.r+16 && state.hurt<=0) { if (state.t > 14) state.hp--; state.hurt=.8; e.x=-80; if (state.hp<=0) end(); }
+        if (e.hp<=0) { state.enemies.splice(i,1); state.kills++; state.score+=30; state.fire.push({x:e.x,y:e.y,r:18,life:.35}); }
+      }
+
+      if (!state.boss && (state.t>48 || state.kills>=24)) state.boss={x:W*.5,y:90,hp:180,max:180,shot:1.2,pulse:0};
+      if (state.boss) updateBoss(dt);
+      if (Math.random()<dt*(1.3+state.level*.2)) state.fire.push({x:p.x,y:p.y,r:30+state.level*4,life:.45});
+      if (Math.random()<dt*5) state.frost.push({x:p.x-Math.cos(p.a)*28,y:p.y-Math.sin(p.a)*28,a:p.a,life:1.25,r:34+state.level*3});
+      updateFields(dt);
+      lifeEl.textContent = "♥".repeat(Math.max(0,state.hp)) + "♡".repeat(Math.max(0,4-state.hp));
+      metaEl.textContent = `长度 ${state.length}/25 · ${Math.floor(state.t)}s · ${state.kills}杀`;
+      phaseEl.textContent = state.boss ? `Boss ${Math.max(0,Math.ceil(state.boss.hp))}` : "觉醒前";
+    }
+
+    function updateBoss(dt) {
+      const b=state.boss, p=state.player;
+      b.x += (p.x-b.x)*dt*.35; b.x=Math.max(70,Math.min(W-70,b.x)); b.y += (98-b.y)*dt*.7;
+      b.shot-=dt; if (b.shot<=0) { b.shot=.95; const a=Math.atan2(p.y-b.y,p.x-b.x); for(let i=-1;i<=1;i++) state.bullets.push({x:b.x,y:b.y,a:a+i*.28,life:3}); }
+      for (const f of state.fire) if (dist(b,f)<f.r+54) b.hp-=dt*22;
+      for (const fr of state.frost) if (dist(b,fr)<fr.r+54) b.hp-=dt*5;
+      for (let i=state.bullets.length-1;i>=0;i--) { const q=state.bullets[i]; q.life-=dt; q.x+=Math.cos(q.a)*150*dt; q.y+=Math.sin(q.a)*150*dt; if (dist(q,p)<23 && state.hurt<=0){if(state.t>14)state.hp--;state.hurt=.8;state.bullets.splice(i,1); if(state.hp<=0)end();} else if(q.life<=0) state.bullets.splice(i,1); }
+      if (b.hp<=0) { state.score+=500; state.boss=null; state.bullets.length=0; }
+    }
+    function updateFields(dt) {
+      for (let i=state.fire.length-1;i>=0;i--) { const f=state.fire[i]; f.life-=dt; f.r+=dt*95; if(f.life<=0) state.fire.splice(i,1); }
+      for (let i=state.frost.length-1;i>=0;i--) { const f=state.frost[i]; f.life-=dt; for(const e of state.enemies) if(dist(e,f)<e.r+f.r){e.slow=.45;e.hp-=dt*.9;} if(f.life<=0) state.frost.splice(i,1); }
+    }
+    function end() { state.gameover=true; running=false; overlay.classList.remove("hidden"); overlay.querySelector("h1").textContent="这条蛇的一生"; overlay.querySelector("p").textContent=`存活 ${Math.floor(state.t)} 秒，长度 ${state.length}/25，击杀 ${state.kills}。点击重新开始。`; overlay.querySelector("button").textContent="再来一局"; }
+    function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+    function seg(i){ return state.trail[Math.min(state.trail.length-1, Math.floor(i*10))] || state.player; }
+
+    function draw() {
+      ctx.clearRect(0,0,W,H);
+      drawArena();
+      if (!running && !state.trail) return;
+      drawPickups(); drawFrost(); drawFireRibbon(); drawEnemies(); drawBoss(); drawSnake(); drawBullets(); drawJoystick();
+    }
+    function drawArena() {
+      ctx.fillStyle=C.ink; ctx.fillRect(0,0,W,H);
+      ctx.save(); ctx.translate(W/2,H/2);
+      for(let r=80;r<Math.max(W,H);r+=115){ ctx.strokeStyle=`rgba(255,209,102,${r%230?0.10:0.18})`; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(0,0,r,0,TAU); ctx.stroke(); }
+      ctx.strokeStyle="rgba(97,239,255,.08)"; ctx.lineWidth=1; for(let i=-6;i<=6;i++){ctx.beginPath();ctx.moveTo(i*64,-H);ctx.lineTo(i*64,H);ctx.stroke();}
+      ctx.restore();
+      const g=ctx.createRadialGradient(W*.5,H*.48,10,W*.5,H*.48,H*.7); g.addColorStop(0,"rgba(20,55,48,.16)"); g.addColorStop(1,"rgba(0,0,0,.42)"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    }
+    function drawSnake() {
+      const pts=[]; for(let i=0;i<state.length;i++) pts.push(seg(i));
+      ctx.lineCap="round"; ctx.lineJoin="round";
+      if(pts.length>1){ path(pts,18,C.jade,.10); path(pts,5,C.gold,.18); }
+      for(let i=pts.length-1;i>=0;i--){ const p=pts[i], mem=i>0&&i%4===0, head=i===0, tail=i===pts.length-1; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a||0); const sx=head?36:tail?24:mem?22:20, sy=head?23:tail?14:mem?20:15; glow(mem?C.amber:C.jade, sx*1.6, .22); ctx.fillStyle=head?"#133228":mem?"#3a3219":"#10251f"; ctx.strokeStyle=mem?C.amber:C.gold; ctx.lineWidth=head?3:2; ctx.beginPath(); if(tail){ctx.moveTo(-sx,0);ctx.lineTo(sx*.7,-sy);ctx.lineTo(sx*.7,sy);ctx.closePath();} else {ctx.ellipse(0,0,sx,sy,0,0,TAU);} ctx.fill();ctx.stroke(); if(head){ctx.fillStyle=C.amber;ctx.beginPath();ctx.arc(11,-7,3,0,TAU);ctx.arc(11,7,3,0,TAU);ctx.fill();} ctx.restore(); }
+    }
+    function drawFireRibbon(){ const pts=[]; for(let i=0;i<Math.min(state.length,14);i++) pts.push(seg(i)); if(pts.length>1){path(pts,24,C.fire,.13);path(pts,7,C.fire2,.23);} for(const f of state.fire){ctx.globalAlpha=Math.max(0,f.life*1.8); ring(f.x,f.y,f.r,C.fire,4); ctx.globalAlpha=1;} }
+    function drawFrost(){ for(const f of state.frost){ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.a);ctx.globalAlpha=Math.max(0,f.life*.42);ctx.fillStyle=C.frost;ctx.strokeStyle="rgba(246,255,247,.42)";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,0,f.r*1.25,f.r*.58,0,0,TAU);ctx.fill();ctx.stroke();ctx.restore();ctx.globalAlpha=1;} }
+    function drawEnemies(){ for(const e of state.enemies){ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.atan2(state.player.y-e.y,state.player.x-e.x)); glow(C.rose,e.r*2.2,e.hit?.38:.2); ctx.fillStyle=e.kind===2?"#311129":e.kind===1?"#22133a":"#2a0d20"; ctx.strokeStyle=e.kind===1?C.violet:C.rose; ctx.lineWidth=3; ctx.beginPath(); if(e.kind===1){ctx.moveTo(e.r,0);ctx.lineTo(-e.r*.7,-e.r*.8);ctx.lineTo(-e.r*.35,0);ctx.lineTo(-e.r*.7,e.r*.8);ctx.closePath();} else ctx.ellipse(0,0,e.r*1.1,e.r*.82,0,0,TAU); ctx.fill();ctx.stroke(); ctx.fillStyle=C.white;ctx.beginPath();ctx.arc(e.r*.35,0,3,0,TAU);ctx.fill();ctx.restore();} }
+    function drawPickups(){ for(const p of state.pickups){p.pulse+=.04; glow(C.amber,34+Math.sin(p.pulse)*4,.22); ctx.fillStyle="#3a2a13";ctx.strokeStyle=C.amber;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(p.x,p.y,13,18,0,0,TAU);ctx.fill();ctx.stroke();ctx.fillStyle=C.gold;ctx.beginPath();ctx.arc(p.x,p.y,5,0,TAU);ctx.fill();} }
+    function drawBoss(){ const b=state.boss;if(!b)return; ctx.save();ctx.translate(b.x,b.y);glow(C.rose,130,.28);ctx.fillStyle="#2f1228";ctx.strokeStyle=C.rose;ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,48,0,TAU);ctx.fill();ctx.stroke();ctx.strokeStyle=C.gold;ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,23,0,TAU);ctx.stroke();ctx.restore(); }
+    function drawBullets(){ for(const q of state.bullets){glow(C.red,24,.25);ctx.fillStyle=C.red;ctx.beginPath();ctx.arc(q.x,q.y,8,0,TAU);ctx.fill();ctx.fillStyle=C.white;ctx.beginPath();ctx.arc(q.x,q.y,3,0,TAU);ctx.fill();} }
+    function drawJoystick(){ if(!pointer)return; ctx.strokeStyle="rgba(56,217,155,.35)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(pointer.x,pointer.y,48,0,TAU);ctx.stroke(); }
+    function path(pts,w,c,a){ctx.strokeStyle=hexA(c,a);ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();}
+    function ring(x,y,r,c,w){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();}
+    function glow(c,r,a){const g=ctx.createRadialGradient(0,0,1,0,0,r);g.addColorStop(0,hexA(c,a));g.addColorStop(1,hexA(c,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,r,0,TAU);ctx.fill();}
+    function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+  </script>
+</body>
+</html>
