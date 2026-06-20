@@ -5,7 +5,7 @@
       "id": "v3-phaser-art-pass",
       "label": "v3 · Phaser 主角与竞技场美术版",
       "sourceCommit": "f30b301",
-      "deployCommit": "17b5993",
+      "deployCommit": "6a8eed0",
       "path": "/serpent-life-mvp/versions/v3-phaser-art-pass/",
       "notes": [
         "主角蛇替换为模块化透明资产",
