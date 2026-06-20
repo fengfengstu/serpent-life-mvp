@@ -52,24 +52,37 @@ async function runViewport(browser, viewport) {
       pickups: scene.pickups.length,
       visibleEnemies: scene.enemies.filter((e) => e.x > cam.scrollX && e.x < cam.scrollX + innerWidth && e.y > cam.scrollY && e.y < cam.scrollY + innerHeight).length,
       textures: [
-        "sf-enemy-idle-1",
-        "sf-enemy-idle-4",
-        "sf-boss-idle-1",
-        "sf-boss-idle-9",
         "impact-1",
         "player-projectile",
         "enemy-projectile",
-        "arena-v3",
-        "snake-head-v3",
-        "snake-body-v3",
-        "snake-memory-v3",
-        "snake-tail-v3",
-        "vfx-fire-ring-v4",
-        "vfx-frost-field-v4",
-        "vfx-shield-star-v4",
-        "vfx-lightning-core-v4",
+        "arena-v5",
+        "snake-head-v5",
+        "snake-body-v5",
+        "snake-memory-v5",
+        "snake-tail-v5",
+        "vfx-fire-ring-v5",
+        "vfx-frost-field-v5",
+        "vfx-shield-star-v5",
+        "vfx-lightning-core-v5",
+        "enemy-drifter-v5",
+        "enemy-hunter-v5",
+        "enemy-bloomer-v5",
+        "boss-core-v5",
       ].map((key) => [key, scene.textures.exists(key)]),
-      enemyAnim: scene.enemies[0]?.sprite?.anims?.currentAnim?.key ?? null,
+      textureSourceSizes: [
+        "arena-v5",
+        "snake-head-v5",
+        "vfx-fire-ring-v5",
+        "enemy-drifter-v5",
+      ].map((key) => {
+        const source = scene.textures.get(key).source[0];
+        return [key, source.width, source.height];
+      }),
+      firstEnemyTexture: scene.enemies[0]?.sprite?.texture?.key ?? null,
+      canvas: (() => {
+        const c = document.querySelector("canvas");
+        return { cssWidth: c.clientWidth, cssHeight: c.clientHeight, width: c.width, height: c.height, dpr: devicePixelRatio };
+      })(),
     };
   });
   await page.screenshot({ path: `qa-smoke-${viewport.name}-first.png`, fullPage: false });
@@ -158,7 +171,13 @@ for (const result of results) {
   if (result.first.mode !== "playing") failures.push(`${result.viewport.name}: first screen not playing`);
   if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
-  if (result.first.enemyAnim !== "enemy-idle-v2") failures.push(`${result.viewport.name}: enemy animation is not v2`);
+  if (!String(result.first.firstEnemyTexture).endsWith("-v5")) failures.push(`${result.viewport.name}: first enemy is not V5 art`);
+  if (!result.first.textureSourceSizes.every(([key, w, h]) => key === "arena-v5" ? w >= 2048 && h >= 2048 : w >= 512 && h >= 512)) {
+    failures.push(`${result.viewport.name}: V5 source texture is not high resolution`);
+  }
+  result.first.canvas.highDprBackingStore =
+    result.first.canvas.width >= result.first.canvas.cssWidth * 2 &&
+    result.first.canvas.height >= result.first.canvas.cssHeight * 2;
   if (result.skillVisuals.skillLayerChildren < 5) failures.push(`${result.viewport.name}: skill visuals did not render`);
   if (!result.joystick.pointerState || !result.joystick.joyBase) failures.push(`${result.viewport.name}: joystick did not activate`);
   if (!result.upgrade.reached || result.upgrade.modeAfterPick !== "playing") failures.push(`${result.viewport.name}: upgrade flow did not return to playing`);

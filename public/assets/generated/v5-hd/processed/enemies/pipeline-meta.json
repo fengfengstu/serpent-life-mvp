@@ -1,0 +1,86 @@
+[
+  {
+    "label": "enemy-drifter-v5",
+    "source_cell": [
+      0,
+      0
+    ],
+    "trim_box": [
+      174,
+      84,
+      475,
+      627
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      287,
+      460
+    ]
+  },
+  {
+    "label": "enemy-hunter-v5",
+    "source_cell": [
+      1,
+      0
+    ],
+    "trim_box": [
+      47,
+      68,
+      501,
+      627
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      399,
+      460
+    ]
+  },
+  {
+    "label": "enemy-bloomer-v5",
+    "source_cell": [
+      0,
+      1
+    ],
+    "trim_box": [
+      87,
+      0,
+      627,
+      546
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      455,
+      460
+    ]
+  },
+  {
+    "label": "boss-core-v5",
+    "source_cell": [
+      1,
+      1
+    ],
+    "trim_box": [
+      0,
+      0,
+      581,
+      565
+    ],
+    "output_size": [
+      512,
+      512
+    ],
+    "drawn_size": [
+      460,
+      447
+    ]
+  }
+]

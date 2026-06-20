@@ -22,6 +22,9 @@
 | --- | --- | --- |
 | v1-sprite-forge | `/versions/v1-sprite-forge/` | Sprite Forge 敌人与 Boss 动画版 |
 | v2-color-semantics | `/versions/v2-color-semantics/` | 战斗识别分色版 |
+| v3-phaser-art-pass | `/versions/v3-phaser-art-pass/` | Phaser 主角与场景美术强化版 |
+| v4-skill-vfx-pass | `/versions/v4-skill-vfx-pass/` | 技能可见性与 VFX 补齐版 |
+| v5-hd-art-vfx | `/versions/v5-hd-art-vfx/` | 高清资产、火环粒子与清晰度强化版 |
 
 ## 后续发布要求
 
