@@ -5,7 +5,7 @@
       "id": "v8-audio-visual-overhaul",
       "label": "v8 · 音画重制强化版",
       "sourceCommit": "97244b3",
-      "deployCommit": "pending",
+      "deployCommit": "71b364c",
       "path": "/serpent-life-mvp/versions/v8-audio-visual-overhaul/",
       "notes": [
         "主 BGM 替换为更强存在感的 Fast Fight 战斗循环曲，音量提升到可感知战斗层级",
