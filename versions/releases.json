@@ -1,6 +1,21 @@
 {
-  "latest": "v11-pale-cathedral-formal",
+  "latest": "v11-mobile-performance",
   "releases": [
+    {
+      "id": "v11-mobile-performance",
+      "label": "v11 · iPhone 性能修正版",
+      "sourceCommit": "bdbcc71",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v11-mobile-performance/",
+      "notes": [
+        "保留 V11 Pale Cathedral 正式版高清美术与 V10 位图技能效果，不覆盖旧版本链接",
+        "移除 V5 蛇/敌人/地图、V8 64 帧大火环、V9 全套回退、V10 旧蛇和旧图标等历史预加载",
+        "V10 技能位图改为加载关键帧，保持技能辨识度同时减少纹理数量和启动压力",
+        "iPhone/低功耗设备启用蛇身、技能光效、HUD 和粒子的轻量刷新策略，游戏逻辑仍逐帧运行",
+        "手机端经验和敌群峰值加入密度阀，避免后期怪潮叠加高清纹理导致 Safari 卡顿",
+        "发布包裁掉不参与运行的原始素材，独立版本目录约 29MB，并通过本地静态版本移动端 smoke"
+      ]
+    },
     {
       "id": "v11-pale-cathedral-formal",
       "label": "v11 · Pale Cathedral 正式测试版",
