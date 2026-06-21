@@ -1,6 +1,21 @@
 {
-  "latest": "v11-mobile-performance",
+  "latest": "v11-iphone-smooth-60fps",
   "releases": [
+    {
+      "id": "v11-iphone-smooth-60fps",
+      "label": "v11 · iPhone 60fps 顺滑版",
+      "sourceCommit": "5b52d20",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v11-iphone-smooth-60fps/",
+      "notes": [
+        "针对移动时一卡一卡的手感问题，不再降低蛇身视觉刷新率",
+        "iPhone/低功耗设备改用蛇身渲染对象池，蛇头、蛇身、光晕每帧更新位置和角度，但不再每帧销毁重建",
+        "iPhone 使用 1.5x 流畅优先 canvas，保留 V11 高清素材但减少每帧像素绘制压力",
+        "身体碰撞在低功耗设备上降采样，优先保证玩家移动、触控输入和镜头跟随的 60fps 感",
+        "继承 v11-mobile-performance 的历史素材瘦身、敌群/经验密度阀、V10 技能关键帧策略",
+        "本地移动端 smoke、iPhone UA canvas/对象池探针通过"
+      ]
+    },
     {
       "id": "v11-mobile-performance",
       "label": "v11 · iPhone 性能修正版",
