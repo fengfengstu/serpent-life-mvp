@@ -27,6 +27,8 @@
 | v5-hd-art-vfx | `/versions/v5-hd-art-vfx/` | 高清资产、火环粒子与清晰度强化版 |
 | v6-defold-spike | `/versions/v6-defold-spike/` | Defold HTML5/WASM 技术验证分叉，含成长取舍、Boss 阶段与高清画布 |
 | v7-art-direction | `/versions/v7-art-direction/` | 原生 Canvas 高 DPI 与统一程序化美术方向验证 |
+| v10-vfx-body-economy | `/versions/v10-vfx-body-economy/` | 身体经济、位图技能 VFX、音频强化版 |
+| v11-pale-cathedral-formal | `/versions/v11-pale-cathedral-formal/` | 中世纪奇幻美术、V11 敌人/地图/UI、Boss 血条与移动端可读性正式测试版 |
 
 ## 后续发布要求
 

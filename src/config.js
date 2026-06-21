@@ -4,7 +4,7 @@ export const GAME_CONFIG = {
   initialCoreHp: 3,
   initialSegments: 3,
   maxSegments: 44,
-  segmentGap: 18,
+  segmentGap: 13,
   baseSpeed: 188,
   baseTurnRate: 7.2,
   turnRateDecay: 0.072,

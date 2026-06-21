@@ -97,6 +97,28 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("snake-body-v10", "body.png");
     this.load.image("snake-memory-v10", "memory.png");
     this.load.image("snake-tail-v10", "tail.png");
+    this.load.setPath("assets/generated/v11/serpent");
+    this.load.image("snake-head-v11", "serpent-head.png");
+    this.load.image("snake-body-v11", "serpent-body.png");
+    this.load.image("snake-memory-v11", "memory.png");
+    this.load.image("snake-tail-v11", "serpent-tail.png");
+    this.load.setPath("assets/generated/v11/map");
+    this.load.image("arena-v11-tutorial", "map-tutorial-blue.png");
+    this.load.image("arena-v11-ch1", "map-chapter1-pale.png");
+    this.load.image("arena-v11-ch2", "map-chapter2-ember.png");
+    this.load.image("arena-v11-ch3", "map-chapter3-violet.png");
+    this.load.setPath("assets/generated/v11/enemies");
+    this.load.image("enemy-drifter-v11", "bone-shard-skitterer.png");
+    this.load.image("enemy-hunter-v11", "winged-lance-bat.png");
+    this.load.image("enemy-bloomer-v11", "floating-bishop-mage.png");
+    this.load.image("enemy-sentinel-v11", "tower-shield-brute.png");
+    this.load.image("boss-elite-v11", "elite-cathedral-serpent.png");
+    this.load.setPath("assets/generated/v11/pickups");
+    this.load.image("pickup-memory-small-v11", "amber-soul-chip.png");
+    this.load.image("pickup-memory-medium-v11", "golden-rune-crystal.png");
+    this.load.image("pickup-skill-v11", "blessed-memory-gem.png");
+    this.load.setPath("assets/generated/v11/skills/icons");
+    SKILLS.forEach((skill) => this.load.image(`skill-icon-${skill.id}-v11`, skill.iconFile ?? `${skill.id}.png`));
     this.load.setPath("assets/generated/v10/skills/icons");
     SKILLS.forEach((skill) => this.load.image(`skill-icon-${skill.id}-v10`, skill.iconFile ?? `${skill.id}.png`));
     this.load.setPath("assets/generated/v10/vfx/mouth-flame");
@@ -445,7 +467,38 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   skillIconAssetPath(skill) {
-    return `assets/generated/v10/skills/icons/${skill.iconFile ?? `${skill.id}.png`}`;
+    return `assets/generated/v11/skills/icons/${skill.iconFile ?? `${skill.id}.png`}`;
+  }
+
+  skillRarityForLevel(level = 1) {
+    if (level >= 5) return "legendary";
+    if (level >= 4) return "epic";
+    if (level >= 2) return "rare";
+    return "uncommon";
+  }
+
+  rarityLabel(rarity = "uncommon") {
+    return {
+      common: "普通",
+      uncommon: "优秀",
+      rare: "稀有",
+      epic: "史诗",
+      legendary: "传说",
+    }[rarity] ?? "优秀";
+  }
+
+  arenaTextureForChapter(chapter = this.chapterForTime()) {
+    if (chapter.index <= 0) return this.textureOr("arena-v11-ch1", "arena-v9");
+    if (chapter.index === 1) return this.textureOr("arena-v11-ch2", "arena-v9");
+    return this.textureOr("arena-v11-ch3", "arena-v9");
+  }
+
+  applyArenaTexture(chapter = this.chapterForTime()) {
+    if (!this.bg) return;
+    const texture = this.arenaTextureForChapter(chapter);
+    if (this.bg.texture?.key !== texture) this.bg.setTexture(texture);
+    this.bg.setTileScale(this.textures.exists(texture) && texture.startsWith("arena-v11") ? 0.58 : 0.26);
+    this.bg.setAlpha(this.textures.exists(texture) && texture.startsWith("arena-v11") ? 0.62 : 1);
   }
 
   chapterForTime(timeMs = this.run?.timeMs ?? 0) {
@@ -468,6 +521,7 @@ class SerpentLifeScene extends Phaser.Scene {
       this.addMemory(`进入「${chapter.name}」：${chapter.text}`, "chapter");
       this.floatText(this.player.x, this.player.y - 96, chapter.name, chapter.color);
       this.addRing(this.player.x, this.player.y, 280, chapter.color, 0.32);
+      this.applyArenaTexture(chapter);
       this.screenShake = Math.max(this.screenShake, 6);
       this.playComboSound("growth");
     }
@@ -576,11 +630,11 @@ class SerpentLifeScene extends Phaser.Scene {
     this.pointerState = null;
     this.screenShake = 0;
 
-    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, this.textureOr("arena-v9", "arena-v5"));
-    this.bg.setTileScale(this.textures.exists("arena-v9") ? 0.26 : 0.74, this.textures.exists("arena-v9") ? 0.26 : 0.74);
-    this.floorShade = this.add.rectangle(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, COLORS.ink, 0.18);
+    this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, this.arenaTextureForChapter(this.chapterForTime(0)));
+    this.applyArenaTexture(this.chapterForTime(0));
+    this.floorShade = this.add.rectangle(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, COLORS.ink, 0.42);
     this.arenaVeil = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, "arena-bg");
-    this.arenaVeil.setTileScale(0.72, 0.72).setAlpha(0.18).setBlendMode(Phaser.BlendModes.MULTIPLY);
+    this.arenaVeil.setTileScale(0.72, 0.72).setAlpha(0.12).setBlendMode(Phaser.BlendModes.MULTIPLY);
     this.worldLayer.add([this.bg, this.floorShade, this.arenaVeil]);
     this.border = this.add.graphics();
     this.worldLayer.add(this.border);
@@ -914,10 +968,10 @@ class SerpentLifeScene extends Phaser.Scene {
     const x = clamp(point.x, 80, GAME_CONFIG.arena - 80);
     const y = clamp(point.y, 80, GAME_CONFIG.arena - 80);
     const aura = this.add.image(x, y, "snake-glow").setTint(COLORS.reward);
-    aura.setDisplaySize(type === "skill" ? 112 : 78, type === "skill" ? 112 : 78).setBlendMode(Phaser.BlendModes.ADD).setAlpha(type === "skill" ? 0.36 : 0.22);
-    const sprite = this.add.image(x, y, type === "skill" ? this.textureOr("pickup-skill-v9", "vfx-lightning-core-v5") : this.textureOr("pickup-memory-v9", "snake-memory-v5")).setDisplaySize(type === "skill" ? 58 : 42, type === "skill" ? 58 : 42);
-    sprite.setTint(type === "skill" ? 0xfff4c4 : 0xffc15a);
-    this.tweens.add({ targets: aura, alpha: type === "skill" ? 0.48 : 0.34, duration: 900, yoyo: true, repeat: -1 });
+    aura.setDisplaySize(type === "skill" ? 126 : 88, type === "skill" ? 126 : 88).setBlendMode(Phaser.BlendModes.ADD).setAlpha(type === "skill" ? 0.4 : 0.3);
+    const foodTexture = this.run?.memoryOverflow > 0 ? this.textureOr("pickup-memory-medium-v11", "pickup-memory-v9") : this.textureOr("pickup-memory-small-v11", "pickup-memory-v9");
+    const sprite = this.add.image(x, y, type === "skill" ? this.textureOr("pickup-skill-v11", "pickup-skill-v9") : foodTexture).setDisplaySize(type === "skill" ? 50 : this.run?.memoryOverflow > 0 ? 42 : 34, type === "skill" ? 50 : this.run?.memoryOverflow > 0 ? 42 : 34);
+    this.tweens.add({ targets: aura, alpha: type === "skill" ? 0.54 : 0.4, duration: 900, yoyo: true, repeat: -1 });
     this.tweens.add({ targets: sprite, angle: 360, duration: type === "skill" ? 4200 : 5600, repeat: -1 });
     this.pickupLayer.add([aura, sprite]);
     this.pickups.push({ type, x, y, radius: type === "skill" ? 24 : 18, sprite, aura });
@@ -1016,12 +1070,23 @@ class SerpentLifeScene extends Phaser.Scene {
     choices.forEach((choice) => {
       const current = choice.type === "skill" ? this.run.skills[choice.id] : 0;
       const cost = choice.type === "skill" ? this.skillBodyCost(choice) : 0;
+      const rarity = choice.type === "skill" ? this.skillRarityForLevel(current + 1) : choice.rarity ?? "uncommon";
       const card = document.createElement("button");
-      card.className = `ui-card is-locked ${choice.rarity ? `is-${choice.rarity}` : ""} ${choice.type === "skill" && !this.canPaySkillCost(cost) ? "is-too-expensive" : ""}`;
-      const suffix = choice.type === "skill" ? ` Lv.${current + 1} · 消耗${cost}` : choice.badge ? ` · ${choice.badge}` : "";
-      const icon = choice.type === "skill" ? `<span class="ui-card-icon"><img src="${this.skillIconAssetPath(choice)}" alt="">${choice.icon}</span>` : `<span class="ui-card-icon">${choice.icon}</span>`;
+      card.className = `ui-card is-locked is-${rarity} ${choice.type === "skill" && !this.canPaySkillCost(cost) ? "is-too-expensive" : ""}`;
+      const level = choice.type === "skill" ? `Lv${current + 1}` : choice.badge ?? "事件";
+      const costText = choice.type === "skill" ? `消耗 ${cost} 节` : choice.badge ?? "不消耗";
+      const icon = choice.type === "skill" ? `<span class="ui-card-icon"><img src="${this.skillIconAssetPath(choice)}" alt=""></span>` : `<span class="ui-card-icon">${choice.icon}</span>`;
       const hint = choice.type === "skill" && !this.canPaySkillCost(cost) ? "身体不足，先吞噬更多记忆。" : choice.text;
-      card.innerHTML = `<strong>${icon}${choice.name}${suffix}</strong><em>${hint}</em>`;
+      card.innerHTML = `
+        <span class="ui-rarity">${this.rarityLabel(rarity)}</span>
+        <span class="ui-level">${level}</span>
+        ${icon}
+        <span class="ui-card-copy">
+          <strong>${choice.name}</strong>
+          <em>${hint}</em>
+          <b>${costText}</b>
+        </span>
+      `;
       card.dataset.locked = "true";
       window.setTimeout(() => {
         card.dataset.locked = "false";
@@ -1310,11 +1375,11 @@ class SerpentLifeScene extends Phaser.Scene {
     const kind = forceKind ?? (chapter.index >= 2 && roll > 0.92 ? "sentinel" : roll > 0.86 ? "bloomer" : roll > 0.56 ? "hunter" : "drifter");
     const spec = ENEMY_KINDS[kind];
     const point = forcedPoint ?? randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 500, 780);
-    const texture = this.textureOr(`enemy-${kind}-v9`, kind === "bloomer" ? "enemy-bloomer-v5" : kind === "hunter" ? "enemy-hunter-v5" : "enemy-drifter-v5");
+    const texture = this.textureOr(`enemy-${kind}-v11`, this.textureOr(`enemy-${kind}-v9`, kind === "bloomer" ? "enemy-bloomer-v5" : kind === "hunter" ? "enemy-hunter-v5" : "enemy-drifter-v5"));
     const sprite = this.add.sprite(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), texture);
-    const baseSize = (kind === "sentinel" ? 118 : kind === "bloomer" ? 106 : kind === "hunter" ? 100 : 88) * (mods.elite ? 1.12 : 1);
+    const baseSize = (kind === "sentinel" ? 72 : kind === "bloomer" ? 64 : kind === "hunter" ? 48 : 40) * (mods.elite ? 1.28 : 1);
     sprite.setDisplaySize(baseSize, baseSize);
-    if (!String(texture).endsWith("-v9")) {
+    if (!String(texture).endsWith("-v9") && !String(texture).endsWith("-v11")) {
       if (kind === "hunter") sprite.setTint(0xff7fca);
       if (kind === "bloomer") sprite.setTint(0xe67bff);
     }
@@ -1437,8 +1502,8 @@ class SerpentLifeScene extends Phaser.Scene {
       x: this.player.x + Math.cos(this.player.angle) * 330,
       y: this.player.y + Math.sin(this.player.angle) * 330,
     };
-    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), this.textureOr(spec.texture, spec.fallbackTexture));
-    const size = spec.final ? 318 : spec.id === "crimson_molt" ? 292 : 252;
+    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), this.textureOr("boss-elite-v11", this.textureOr(spec.texture, spec.fallbackTexture)));
+    const size = spec.final ? 220 : spec.id === "crimson_molt" ? 188 : 168;
     sprite.setDisplaySize(size, size);
     const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(spec.color).setDisplaySize(size * 1.12, size * 1.12).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
     const hpBar = this.add.graphics();
@@ -1492,7 +1557,8 @@ class SerpentLifeScene extends Phaser.Scene {
     b.sprite.setPosition(b.x, b.y);
     b.glow.setPosition(b.x, b.y);
     const pulse = Math.sin(this.run.timeMs / 180) * (b.phase === 2 ? 7 : 4);
-    b.sprite.setDisplaySize(266 + pulse, 266 + pulse);
+    const baseSize = b.spec.final ? 220 : b.spec.id === "crimson_molt" ? 188 : 168;
+    b.sprite.setDisplaySize(baseSize + pulse, baseSize + pulse);
     b.glow.rotation -= dt * 0.5;
     b.glow.setAlpha((b.phase === 2 ? 0.34 : 0.26) + Math.max(0, pulse) * 0.006);
 
@@ -2122,23 +2188,23 @@ class SerpentLifeScene extends Phaser.Scene {
       const p = this.getSegmentPoint(i);
       const taper = 1 - i / (this.run.segments + 2);
       const isTail = i === this.run.segments - 1;
-      const size = i === 0 ? 23 : isTail ? 15 + taper * 4 : 12 + taper * 7;
+      const size = i === 0 ? 19 : isTail ? 14 + taper * 4 : 13 + taper * 6;
       const alpha = i === 0 ? 1 : clamp(0.82 - i * 0.018, 0.46, 0.82);
       const isMemory = i > 0 && i % 4 === 0 && !isTail;
       const glow = this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : isMemory ? COLORS.reward : COLORS.jade);
       glow.setDisplaySize(size * (i === 0 ? 3.9 : 2.65), size * (i === 0 ? 3.9 : 2.65)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.5 : isMemory ? 0.24 : 0.14);
       if (i === 0) {
-        const body = this.add.image(p.x, p.y, this.textureOr("snake-head-v10", "snake-head-v9"));
+        const body = this.add.image(p.x, p.y, this.textureOr("snake-head-v11", this.textureOr("snake-head-v10", "snake-head-v9")));
         const headAngle = p.angle ?? this.player.angle;
         body.setRotation(headAngle + Math.PI / 2);
-        body.setDisplaySize(96, 96);
+        body.setDisplaySize(72, 72);
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
         this.snakeLayer.add([glow, body]);
       } else {
-        const texture = isTail ? this.textureOr("snake-tail-v10", "snake-tail-v9") : isMemory ? this.textureOr("snake-memory-v10", "snake-memory-v9") : this.textureOr("snake-body-v10", "snake-body-v9");
-        const displayX = isTail ? 52 + taper * 18 : isMemory ? 46 + taper * 10 : 42 + taper * 9;
-        const displayY = isTail ? 38 + taper * 13 : isMemory ? 46 + taper * 10 : 42 + taper * 9;
+        const texture = isTail ? this.textureOr("snake-tail-v11", this.textureOr("snake-tail-v10", "snake-tail-v9")) : isMemory ? this.textureOr("snake-memory-v11", this.textureOr("snake-memory-v10", "snake-memory-v9")) : this.textureOr("snake-body-v11", this.textureOr("snake-body-v10", "snake-body-v9"));
+        const displayX = isTail ? 42 + taper * 14 : isMemory ? 40 + taper * 9 : 34 + taper * 8;
+        const displayY = isTail ? 32 + taper * 10 : isMemory ? 40 + taper * 9 : 34 + taper * 8;
         const body = this.add.image(p.x, p.y, texture);
         body.setDisplaySize(displayX, displayY);
         body.setRotation((p.angle ?? this.player.angle) + (isTail ? 0 : Math.PI / 2));
@@ -2168,7 +2234,7 @@ class SerpentLifeScene extends Phaser.Scene {
   updateHud() {
     if (!this.dom?.hearts) return;
     const hp = Math.max(0, this.run.coreHp);
-    this.dom.hearts.textContent = `命脉 ${hp}/${GAME_CONFIG.initialCoreHp}`;
+    this.dom.hearts.textContent = `身 ${this.run.segments}/${GAME_CONFIG.maxSegments} · 命 ${hp}/${GAME_CONFIG.initialCoreHp}`;
     const protect = this.run.timeMs < GAME_CONFIG.lethalProtectionMs ? " · 保" : "";
     const cracks = this.run.bodyCracks > 0 ? ` · 裂${this.run.bodyCracks}/${GAME_CONFIG.bodyCrackLimit}` : "";
     const event = this.run.currentEvent ? ` · ${this.run.currentEvent.name}` : "";
