@@ -4,13 +4,13 @@ import { BOSS_STAGES, CHAPTERS, COLORS, ELITE_EVENTS, ENEMY_KINDS, GAME_CONFIG, 
 const W = 390;
 const H = 844;
 const TWO_PI = Math.PI * 2;
-const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, 2);
-const TEXT_RESOLUTION = Math.min(window.devicePixelRatio || 1, 3);
 const IS_IOS =
   /iP(hone|ad|od)/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const LOW_POWER_RENDER = IS_IOS || ((navigator.hardwareConcurrency ?? 8) <= 4);
-const SNAKE_RENDER_INTERVAL_MS = LOW_POWER_RENDER ? 50 : 34;
+const RENDER_RESOLUTION = LOW_POWER_RENDER ? Math.min(window.devicePixelRatio || 1, 1.5) : Math.min(window.devicePixelRatio || 1, 2);
+const TEXT_RESOLUTION = Math.min(window.devicePixelRatio || 1, 3);
+const SNAKE_RENDER_INTERVAL_MS = LOW_POWER_RENDER ? 16 : 34;
 const SKILL_AURA_INTERVAL_MS = LOW_POWER_RENDER ? 80 : 50;
 const HUD_RENDER_INTERVAL_MS = LOW_POWER_RENDER ? 120 : 80;
 const UI_FONT = "Arial, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif";
@@ -508,6 +508,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.skillLayer?.destroy();
     this.skillLayer = null;
     this.snakeLayer?.removeAll(true);
+    this.fastSnakeRender = null;
     this.uiLayer?.removeAll(true);
     this.cameraTarget?.destroy();
     this.cameraTarget = null;
@@ -716,10 +717,14 @@ class SerpentLifeScene extends Phaser.Scene {
       this.renderSkillAuras();
     }
     this.updateSpawns(ms);
-    this.snakeRenderMs += ms;
-    if (this.snakeRenderMs >= SNAKE_RENDER_INTERVAL_MS) {
-      this.snakeRenderMs = 0;
+    if (LOW_POWER_RENDER) {
       this.drawSnake();
+    } else {
+      this.snakeRenderMs += ms;
+      if (this.snakeRenderMs >= SNAKE_RENDER_INTERVAL_MS) {
+        this.snakeRenderMs = 0;
+        this.drawSnake();
+      }
     }
     this.hudRenderMs += ms;
     if (this.hudRenderMs >= HUD_RENDER_INTERVAL_MS) {
@@ -1414,7 +1419,8 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   findBodyHit(x, y, radius) {
-    for (let s = 2; s < this.run.segments; s += 1) {
+    const stride = LOW_POWER_RENDER ? 2 : 1;
+    for (let s = 2; s < this.run.segments; s += stride) {
       const point = this.getSegmentPoint(s);
       if (point && Phaser.Math.Distance.Between(x, y, point.x, point.y) < radius + GAME_CONFIG.bodyRadius) {
         return { index: s, point };
@@ -2137,6 +2143,10 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   drawSnake() {
+    if (LOW_POWER_RENDER) {
+      this.drawSnakeFast();
+      return;
+    }
     this.snakeLayer.removeAll(true);
     const hurt = this.player.hurtMs > 0;
     const spine = this.add.graphics();
@@ -2208,6 +2218,93 @@ class SerpentLifeScene extends Phaser.Scene {
           }
         }
         this.snakeLayer.add([glow, body, detail].filter(Boolean));
+      }
+    }
+    this.snakeLayer.setDepth(30);
+  }
+
+  ensureFastSnakeRender() {
+    if (this.fastSnakeRender?.nodes?.length >= GAME_CONFIG.maxSegments) return this.fastSnakeRender;
+    this.snakeLayer.removeAll(true);
+    const spine = this.add.graphics();
+    this.snakeLayer.add(spine);
+    const nodes = [];
+    for (let i = GAME_CONFIG.maxSegments - 1; i >= 0; i -= 1) {
+      const glow = this.add.image(0, 0, "snake-glow").setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+      const body = this.add.image(0, 0, this.textureOr("snake-body-v11", "snake-glow")).setVisible(false);
+      this.snakeLayer.add([glow, body]);
+      nodes[i] = { glow, body, lastTexture: null };
+    }
+    this.fastSnakeRender = { spine, nodes };
+    this.snakeLayer.setDepth(30);
+    return this.fastSnakeRender;
+  }
+
+  drawSnakeFast() {
+    if (!this.snakeLayer || !this.player || !this.run) return;
+    const hurt = this.player.hurtMs > 0;
+    const render = this.ensureFastSnakeRender();
+    const points = [];
+    for (let i = 0; i < this.run.segments; i += 1) {
+      const p = this.getSegmentPoint(i);
+      if (p) points[i] = p;
+    }
+    render.spine.clear();
+    if (points.length > 1 && points[0]) {
+      render.spine.lineStyle(10, hurt ? COLORS.rose : COLORS.jade, hurt ? 0.1 : 0.045);
+      render.spine.beginPath();
+      render.spine.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) {
+        if (points[i]) render.spine.lineTo(points[i].x, points[i].y);
+      }
+      render.spine.strokePath();
+      render.spine.lineStyle(3, COLORS.gold, hurt ? 0.1 : 0.035);
+      render.spine.beginPath();
+      render.spine.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) {
+        if (points[i]) render.spine.lineTo(points[i].x, points[i].y);
+      }
+      render.spine.strokePath();
+    }
+    for (let i = 0; i < render.nodes.length; i += 1) {
+      const node = render.nodes[i];
+      const p = points[i];
+      const active = i < this.run.segments && !!p;
+      node.body.setVisible(active);
+      node.glow.setVisible(false);
+      if (!active) continue;
+      const taper = 1 - i / (this.run.segments + 2);
+      const isTail = i === this.run.segments - 1;
+      const isMemory = i > 0 && i % 4 === 0 && !isTail;
+      const texture = i === 0
+        ? this.textureOr("snake-head-v11", "snake-glow")
+        : isTail
+          ? this.textureOr("snake-tail-v11", "snake-body-v11")
+          : isMemory
+            ? this.textureOr("snake-memory-v11", "snake-body-v11")
+            : this.textureOr("snake-body-v11", "snake-glow");
+      if (node.lastTexture !== texture) {
+        node.body.setTexture(texture);
+        node.lastTexture = texture;
+      }
+      const displayX = i === 0 ? 72 : isTail ? 42 + taper * 14 : isMemory ? 40 + taper * 9 : 34 + taper * 8;
+      const displayY = i === 0 ? 72 : isTail ? 32 + taper * 10 : isMemory ? 40 + taper * 9 : 34 + taper * 8;
+      const alpha = i === 0 ? 1 : clamp(0.82 - i * 0.018, 0.46, 0.82);
+      node.body
+        .setPosition(p.x, p.y)
+        .setDisplaySize(displayX, displayY)
+        .setRotation((p.angle ?? this.player.angle) + (i === 0 || !isTail ? Math.PI / 2 : 0))
+        .setAlpha(alpha)
+        .setTint(hurt ? 0xffd7e3 : 0xffffff);
+      const shouldGlow = i === 0 || isTail || isMemory || i % 3 === 0;
+      if (shouldGlow) {
+        const size = i === 0 ? 19 : isTail ? 14 + taper * 4 : 13 + taper * 6;
+        node.glow
+          .setVisible(true)
+          .setPosition(p.x, p.y)
+          .setTint(hurt ? COLORS.rose : isMemory ? COLORS.reward : COLORS.jade)
+          .setDisplaySize(size * (i === 0 ? 3.9 : 2.65), size * (i === 0 ? 3.9 : 2.65))
+          .setAlpha(i === 0 ? 0.42 : isMemory ? 0.2 : 0.11);
       }
     }
     this.snakeLayer.setDepth(30);
