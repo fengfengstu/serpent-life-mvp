@@ -4,7 +4,7 @@
     {
       "id": "v11-mobile-performance",
       "label": "v11 · iPhone 性能修正版",
-      "sourceCommit": "bdbcc71",
+      "sourceCommit": "a41f9da",
       "deployCommit": "pending",
       "path": "/serpent-life-mvp/versions/v11-mobile-performance/",
       "notes": [
