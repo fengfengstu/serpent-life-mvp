@@ -1,6 +1,21 @@
 {
-  "latest": "v10-vfx-body-economy",
+  "latest": "v11-pale-cathedral-formal",
   "releases": [
+    {
+      "id": "v11-pale-cathedral-formal",
+      "label": "v11 · Pale Cathedral 正式测试版",
+      "sourceCommit": "0dbf45c",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v11-pale-cathedral-formal/",
+      "notes": [
+        "接入 V11 中世纪奇幻蛇、敌人、地图、经验拾取物和技能图标",
+        "移动端 HUD 改为更紧凑结构，技能条、进度条和 Boss 血条分层显示，避免小屏溢出",
+        "地图纹理压噪，经验拾取物放大并强化发光，敌人和奖励更容易读清",
+        "蛇头显示尺寸下调，身体采样间距收紧，身体增长更连续",
+        "升级卡新增等级、消耗和身体不足状态，Boss 顶部血条显示名称、血量和护盾",
+        "发布版 smoke 覆盖两个移动尺寸、摇杆、升级、Boss 破盾/击杀、死亡重开、音频和 UI 越界"
+      ]
+    },
     {
       "id": "v10-vfx-body-economy",
       "label": "v10 · 技能位图与身体经济版",
