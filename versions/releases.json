@@ -1,6 +1,21 @@
 {
-  "latest": "v9-1-european-fantasy-hidpi",
+  "latest": "v10-vfx-body-economy",
   "releases": [
+    {
+      "id": "v10-vfx-body-economy",
+      "label": "v10 · 技能位图与身体经济版",
+      "sourceCommit": "41a3060",
+      "deployCommit": "63826d9",
+      "path": "/serpent-life-mvp/versions/v10-vfx-body-economy/",
+      "notes": [
+        "接入 V10 皇家蛇头、身体、记忆节和尾部资产，修正蛇头鼻嘴朝向，移除旧矢量头部覆盖",
+        "把火舌、尖牙弹、穿刺圣矛、冰轨、雷链、磁吸和疾行拖影改为位图帧加程序粒子的混合表现",
+        "新增 8 技能卡池：龙息火舌、冰冻轨迹、尖牙弹、穿刺圣矛、记忆磁场、疾行蜕影、护身星轨、闪电链",
+        "技能升级消耗身体长度，保留身体成为可选项，长度上限提升到 44 并进入身体经济循环",
+        "技能掉落节奏放慢，升级卡显示消耗，身体不足时自动保留身体避免卡在升级界面",
+        "HUD 改为命脉/身体表达，技能图标不再裁切，移动端摇杆、Boss、死亡重开和小屏升级流程烟测通过"
+      ]
+    },
     {
       "id": "v9-1-european-fantasy-hidpi",
       "label": "v9.1 · 欧洲奇幻高清渲染版",
