@@ -61,7 +61,7 @@ button {
   padding: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   background:
     linear-gradient(180deg, rgba(5, 7, 11, 0.16), rgba(5, 7, 11, 0.88)),
-    url("/assets/generated/v9-euro/arena/floor.png") center / cover no-repeat,
+    url("/assets/generated/v11/map/map-chapter1-pale.png") center / cover no-repeat,
     radial-gradient(circle at 50% 20%, rgba(54, 232, 159, 0.16), transparent 34%),
     linear-gradient(180deg, rgba(5, 7, 11, 0.16), rgba(5, 7, 11, 0.82));
 }
