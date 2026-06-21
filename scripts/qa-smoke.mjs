@@ -58,35 +58,12 @@ async function runViewport(browser, viewport) {
         "impact-1",
         "player-projectile",
         "enemy-projectile",
-        "arena-v5",
-        "snake-head-v5",
-        "snake-body-v5",
-        "snake-memory-v5",
-        "snake-tail-v5",
         "vfx-fire-ring-v5",
-        "fire-circle-v8",
-        "vfx-frost-field-v5",
-        "vfx-shield-star-v5",
-        "vfx-lightning-core-v5",
-        "lightning-bolt-v8",
-        "arena-v9",
-        "snake-head-v9",
-        "snake-body-v9",
-        "snake-memory-v9",
-        "snake-tail-v9",
-        "enemy-drifter-v9",
-        "enemy-hunter-v9",
-        "enemy-bloomer-v9",
-        "enemy-sentinel-v9",
-        "boss-warden-v9",
-        "boss-crimson-v9",
-        "boss-archivist-v9",
-        "pickup-memory-v9",
-        "pickup-skill-v9",
-        "enemy-drifter-v5",
-        "enemy-hunter-v5",
-        "enemy-bloomer-v5",
-        "boss-core-v5",
+        "v10-flame-tongue-1",
+        "v10-frost-trail-1",
+        "v10-chain-arc-1",
+        "v10-fang-1",
+        "v10-spear-1",
         "arena-v11-ch1",
         "arena-v11-ch2",
         "arena-v11-ch3",
@@ -103,6 +80,7 @@ async function runViewport(browser, viewport) {
         "pickup-memory-medium-v11",
         "pickup-skill-v11",
       ].map((key) => [key, scene.textures.exists(key)]),
+      textureCount: Object.keys(scene.textures.list ?? {}).length,
       textureSourceSizes: [
         "arena-v11-ch1",
         "snake-head-v11",
@@ -355,6 +333,7 @@ for (const result of results) {
   if (result.first.mode !== "playing") failures.push(`${result.viewport.name}: first screen not playing`);
   if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
+  if (result.first.textureCount > 95) failures.push(`${result.viewport.name}: too many textures preloaded (${result.first.textureCount})`);
   if (!String(result.first.firstEnemyTexture).endsWith("-v11")) failures.push(`${result.viewport.name}: first enemy is not V11 art`);
   if (!result.first.textureSourceSizes.every(([key, w, h]) => key.startsWith("arena-v11") ? w >= 1024 && h >= 1024 : key.includes("pickup") ? w >= 320 && h >= 320 : w >= 512 || h >= 512)) {
     failures.push(`${result.viewport.name}: V11 source texture is too low resolution`);

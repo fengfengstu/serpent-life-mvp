@@ -6,6 +6,13 @@ const H = 844;
 const TWO_PI = Math.PI * 2;
 const RENDER_RESOLUTION = Math.min(window.devicePixelRatio || 1, 2);
 const TEXT_RESOLUTION = Math.min(window.devicePixelRatio || 1, 3);
+const IS_IOS =
+  /iP(hone|ad|od)/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const LOW_POWER_RENDER = IS_IOS || ((navigator.hardwareConcurrency ?? 8) <= 4);
+const SNAKE_RENDER_INTERVAL_MS = LOW_POWER_RENDER ? 50 : 34;
+const SKILL_AURA_INTERVAL_MS = LOW_POWER_RENDER ? 80 : 50;
+const HUD_RENDER_INTERVAL_MS = LOW_POWER_RENDER ? 120 : 80;
 const UI_FONT = "Arial, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif";
 
 function clamp(v, min, max) {
@@ -48,55 +55,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("spark", "spark.png");
     this.load.setPath("assets/generated/sprite-forge/processed/impact");
     for (let i = 1; i <= 4; i += 1) this.load.image(`impact-${i}`, `impact-${i}.png`);
-    this.load.setPath("assets/generated/v5-hd/processed/arena");
-    this.load.image("arena-v5", "arena-floor-v5-2048.png");
-    this.load.setPath("assets/generated/v5-hd/processed/serpent");
-    this.load.image("snake-head-v5", "snake-head-v5.png");
-    this.load.image("snake-body-v5", "snake-body-v5.png");
-    this.load.image("snake-memory-v5", "snake-memory-v5.png");
-    this.load.image("snake-tail-v5", "snake-tail-v5.png");
     this.load.setPath("assets/generated/v5-hd/processed/skills");
     this.load.image("vfx-fire-ring-v5", "vfx-fire-ring-v5.png");
-    this.load.image("vfx-frost-field-v5", "vfx-frost-field-v5.png");
-    this.load.image("vfx-shield-star-v5", "vfx-shield-star-v5.png");
-    this.load.image("vfx-lightning-core-v5", "vfx-lightning-core-v5.png");
-    this.load.setPath("assets/generated/v8-open/vfx/fire");
-    this.load.spritesheet("fire-circle-v8", "fire_circles_400x400.png", { frameWidth: 400, frameHeight: 400 });
-    this.load.setPath("assets/generated/v8-open/vfx/lightning");
-    this.load.image("lightning-bolt-v8", "lightning3.png");
-    this.load.setPath("assets/generated/v5-hd/processed/enemies");
-    this.load.image("enemy-drifter-v5", "enemy-drifter-v5.png");
-    this.load.image("enemy-hunter-v5", "enemy-hunter-v5.png");
-    this.load.image("enemy-bloomer-v5", "enemy-bloomer-v5.png");
-    this.load.image("boss-core-v5", "boss-core-v5.png");
-    this.load.setPath("assets/generated/v9-euro/arena");
-    this.load.image("arena-v9", "floor.png");
-    this.load.setPath("assets/generated/v9-euro/serpent");
-    this.load.image("snake-head-v9", "head.png");
-    this.load.image("snake-body-v9", "body.png");
-    this.load.image("snake-memory-v9", "memory.png");
-    this.load.image("snake-tail-v9", "tail.png");
-    this.load.setPath("assets/generated/v9-euro/enemies");
-    this.load.image("enemy-drifter-v9", "drifter.png");
-    this.load.image("enemy-hunter-v9", "hunter.png");
-    this.load.image("enemy-bloomer-v9", "bloomer.png");
-    this.load.image("enemy-sentinel-v9", "sentinel.png");
-    this.load.setPath("assets/generated/v9-euro/bosses");
-    this.load.image("boss-warden-v9", "warden.png");
-    this.load.image("boss-crimson-v9", "crimson.png");
-    this.load.image("boss-archivist-v9", "archivist.png");
-    this.load.setPath("assets/generated/v9-euro/pickups");
-    this.load.image("pickup-memory-v9", "memory.png");
-    this.load.image("pickup-skill-v9", "skill-core.png");
-    this.load.setPath("assets/generated/v9-euro/skills");
-    ["fire", "frost", "turret", "shield", "lightning"].forEach((id) => this.load.image(`skill-icon-${id}-v9`, `${id}.png`));
-    this.load.setPath("assets/generated/v9-euro/ui");
-    this.load.image("ui-panel-v9", "panel-9slice.png");
-    this.load.setPath("assets/generated/v10/serpent");
-    this.load.image("snake-head-v10", "head.png");
-    this.load.image("snake-body-v10", "body.png");
-    this.load.image("snake-memory-v10", "memory.png");
-    this.load.image("snake-tail-v10", "tail.png");
     this.load.setPath("assets/generated/v11/serpent");
     this.load.image("snake-head-v11", "serpent-head.png");
     this.load.image("snake-body-v11", "serpent-body.png");
@@ -119,41 +79,39 @@ class SerpentLifeScene extends Phaser.Scene {
     this.load.image("pickup-skill-v11", "blessed-memory-gem.png");
     this.load.setPath("assets/generated/v11/skills/icons");
     SKILLS.forEach((skill) => this.load.image(`skill-icon-${skill.id}-v11`, skill.iconFile ?? `${skill.id}.png`));
-    this.load.setPath("assets/generated/v10/skills/icons");
-    SKILLS.forEach((skill) => this.load.image(`skill-icon-${skill.id}-v10`, skill.iconFile ?? `${skill.id}.png`));
     this.load.setPath("assets/generated/v10/vfx/mouth-flame");
-    for (let i = 1; i <= 8; i += 1) this.load.image(`v10-flame-tongue-${i}`, `flame_tongue_${String(i).padStart(2, "0")}.png`);
-    for (let i = 1; i <= 6; i += 1) this.load.image(`v10-flame-impact-${i}`, `impact_burst_${String(i).padStart(2, "0")}.png`);
+    for (let i = 1; i <= 4; i += 1) this.load.image(`v10-flame-tongue-${i}`, `flame_tongue_${String(i).padStart(2, "0")}.png`);
+    for (let i = 1; i <= 3; i += 1) this.load.image(`v10-flame-impact-${i}`, `impact_burst_${String(i).padStart(2, "0")}.png`);
     this.load.setPath("assets/generated/v10/vfx/frost-trail");
-    for (let i = 1; i <= 8; i += 1) this.load.image(`v10-frost-trail-${i}`, `frost_trail_${String(i).padStart(2, "0")}.png`);
-    for (let i = 1; i <= 6; i += 1) this.load.image(`v10-frost-hit-${i}`, `frost_hit_${String(i).padStart(2, "0")}.png`);
+    for (let i = 1; i <= 4; i += 1) this.load.image(`v10-frost-trail-${i}`, `frost_trail_${String(i).padStart(2, "0")}.png`);
+    for (let i = 1; i <= 3; i += 1) this.load.image(`v10-frost-hit-${i}`, `frost_hit_${String(i).padStart(2, "0")}.png`);
     this.load.setPath("assets/generated/v10/vfx/chain-lightning");
-    for (let i = 1; i <= 8; i += 1) this.load.image(`v10-chain-arc-${i}`, `chain_arc_${String(i).padStart(2, "0")}.png`);
-    for (let i = 1; i <= 6; i += 1) this.load.image(`v10-chain-hit-${i}`, `chain_hit_${String(i).padStart(2, "0")}.png`);
+    for (let i = 1; i <= 4; i += 1) this.load.image(`v10-chain-arc-${i}`, `chain_arc_${String(i).padStart(2, "0")}.png`);
+    for (let i = 1; i <= 3; i += 1) this.load.image(`v10-chain-hit-${i}`, `chain_hit_${String(i).padStart(2, "0")}.png`);
     this.load.setPath("assets/generated/v10/vfx/guardian-orbit");
-    for (let i = 1; i <= 4; i += 1) {
+    for (let i = 1; i <= 2; i += 1) {
       this.load.image(`v10-guardian-shield-${i}`, `shield_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-guardian-impact-${i}`, `impact_${String(i).padStart(2, "0")}.png`);
     }
     this.load.setPath("assets/generated/v10/vfx/fang-projectile");
-    for (let i = 1; i <= 4; i += 1) {
+    for (let i = 1; i <= 2; i += 1) {
       this.load.image(`v10-fang-${i}`, `fang_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-fang-trail-${i}`, `trail_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-fang-impact-${i}`, `impact_${String(i).padStart(2, "0")}.png`);
     }
     this.load.setPath("assets/generated/v10/vfx/memory-magnet");
-    for (let i = 1; i <= 4; i += 1) {
+    for (let i = 1; i <= 2; i += 1) {
       this.load.image(`v10-magnet-crystal-${i}`, `crystal_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-magnet-trail-${i}`, `beadtrail_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-magnet-burst-${i}`, `burst_${String(i).padStart(2, "0")}.png`);
     }
     this.load.setPath("assets/generated/v10/vfx/serpent-speed");
-    for (let i = 1; i <= 4; i += 1) {
+    for (let i = 1; i <= 2; i += 1) {
       this.load.image(`v10-speed-streak-${i}`, `streak_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-speed-curve-${i}`, `curve_${String(i).padStart(2, "0")}.png`);
     }
     this.load.setPath("assets/generated/v10/vfx/piercing-spear");
-    for (let i = 1; i <= 4; i += 1) {
+    for (let i = 1; i <= 2; i += 1) {
       this.load.image(`v10-spear-${i}`, `spear_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-spear-charge-${i}`, `charge_${String(i).padStart(2, "0")}.png`);
       this.load.image(`v10-spear-impact-${i}`, `impact_${String(i).padStart(2, "0")}.png`);
@@ -407,16 +365,16 @@ class SerpentLifeScene extends Phaser.Scene {
     this.showDom("menu");
 
     const { width, height } = this.viewSize();
-    const bg = this.add.image(width / 2, height / 2, this.textureOr("arena-v9", "arena-v5")).setScrollFactor(0);
+    const bg = this.add.image(width / 2, height / 2, this.textureOr("arena-v11-ch1", "arena-bg")).setScrollFactor(0);
     bg.setDisplaySize(width, height).setAlpha(0.92);
     const shade = this.add.rectangle(width / 2, height / 2, width, height, COLORS.ink, 0.22).setScrollFactor(0);
     const halo = this.add.image(width / 2, height * 0.23, "snake-glow").setTint(COLORS.acid).setDisplaySize(260, 180).setAlpha(0.28).setScrollFactor(0);
     halo.setBlendMode(Phaser.BlendModes.ADD);
-    const head = this.add.image(width / 2, height * 0.23, this.textureOr("snake-head-v10", "snake-head-v9")).setDisplaySize(124, 124).setScrollFactor(0);
+    const head = this.add.image(width / 2, height * 0.23, this.textureOr("snake-head-v11", "snake-glow")).setDisplaySize(124, 124).setScrollFactor(0);
     head.setRotation(-0.12);
     const body = [];
     for (let i = 1; i <= 8; i += 1) {
-      const node = this.add.image(width / 2 - i * 23, height * 0.23 + Math.sin(i * 0.75) * 18, i === 8 ? this.textureOr("snake-tail-v10", "snake-tail-v9") : this.textureOr("snake-body-v10", "snake-body-v9"));
+      const node = this.add.image(width / 2 - i * 23, height * 0.23 + Math.sin(i * 0.75) * 18, i === 8 ? this.textureOr("snake-tail-v11", "snake-body-v11") : this.textureOr("snake-body-v11", "snake-glow"));
       node.setDisplaySize(58 - i * 1.4, 58 - i * 1.4).setScrollFactor(0).setRotation(0.18 + i * 0.18);
       body.push(node);
     }
@@ -488,9 +446,9 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   arenaTextureForChapter(chapter = this.chapterForTime()) {
-    if (chapter.index <= 0) return this.textureOr("arena-v11-ch1", "arena-v9");
-    if (chapter.index === 1) return this.textureOr("arena-v11-ch2", "arena-v9");
-    return this.textureOr("arena-v11-ch3", "arena-v9");
+    if (chapter.index <= 0) return this.textureOr("arena-v11-ch1", "arena-bg");
+    if (chapter.index === 1) return this.textureOr("arena-v11-ch2", "arena-v11-ch1");
+    return this.textureOr("arena-v11-ch3", "arena-v11-ch1");
   }
 
   applyArenaTexture(chapter = this.chapterForTime()) {
@@ -629,6 +587,10 @@ class SerpentLifeScene extends Phaser.Scene {
     this.nextFrostFieldMs = 0;
     this.pointerState = null;
     this.screenShake = 0;
+    this.snakeRenderMs = SNAKE_RENDER_INTERVAL_MS;
+    this.skillAuraRenderMs = SKILL_AURA_INTERVAL_MS;
+    this.hudRenderMs = HUD_RENDER_INTERVAL_MS;
+    this.lastSkillSignature = null;
 
     this.bg = this.add.tileSprite(GAME_CONFIG.arena / 2, GAME_CONFIG.arena / 2, GAME_CONFIG.arena, GAME_CONFIG.arena, this.arenaTextureForChapter(this.chapterForTime(0)));
     this.applyArenaTexture(this.chapterForTime(0));
@@ -662,6 +624,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.cameraTarget, true, 0.12, 0.12);
     this.forceCameraToPlayer();
     this.addMemory("出生时，它只有三节身体和三颗心。", "birth");
+    this.renderSkillAuras();
+    this.drawSnake();
     this.updateHud();
   }
 
@@ -746,10 +710,22 @@ class SerpentLifeScene extends Phaser.Scene {
     this.updateWaveEvent(ms);
     this.updateRunSurprises(ms);
     this.updateMusicState();
-    this.renderSkillAuras();
+    this.skillAuraRenderMs += ms;
+    if (this.skillAuraRenderMs >= SKILL_AURA_INTERVAL_MS) {
+      this.skillAuraRenderMs = 0;
+      this.renderSkillAuras();
+    }
     this.updateSpawns(ms);
-    this.drawSnake();
-    this.updateHud();
+    this.snakeRenderMs += ms;
+    if (this.snakeRenderMs >= SNAKE_RENDER_INTERVAL_MS) {
+      this.snakeRenderMs = 0;
+      this.drawSnake();
+    }
+    this.hudRenderMs += ms;
+    if (this.hudRenderMs >= HUD_RENDER_INTERVAL_MS) {
+      this.hudRenderMs = 0;
+      this.updateHud();
+    }
     this.updateCamera(ms);
   }
 
@@ -863,7 +839,8 @@ class SerpentLifeScene extends Phaser.Scene {
 
     const memoryRain = this.run.currentEvent?.id === "memory_rain";
     const hunt = this.run.currentEvent?.id === "hunt";
-    if (this.run.nextFoodMs <= 0 && this.pickups.filter((p) => p.type === "food").length < (memoryRain ? 34 : 26)) {
+    const foodLimit = LOW_POWER_RENDER ? (memoryRain ? 24 : 18) : (memoryRain ? 34 : 26);
+    if (this.run.nextFoodMs <= 0 && this.pickups.filter((p) => p.type === "food").length < foodLimit) {
       this.run.nextFoodMs = memoryRain ? Math.max(260, GAME_CONFIG.foodSpawnMs * 0.48) : Math.max(460, GAME_CONFIG.foodSpawnMs - chapter.index * 35);
       this.spawnPickup("food");
     }
@@ -872,7 +849,9 @@ class SerpentLifeScene extends Phaser.Scene {
       this.spawnPickup("skill");
     }
     const chapterPressure = chapter.index * 4;
-    if (this.run.nextEnemyMs <= 0 && this.enemies.length < 11 + this.run.wave * 2 + chapterPressure + (hunt ? 6 : 0) + (this.run.currentElite ? 4 : 0)) {
+    const enemyLimit = 11 + this.run.wave * 2 + chapterPressure + (hunt ? 6 : 0) + (this.run.currentElite ? 4 : 0);
+    const tunedEnemyLimit = LOW_POWER_RENDER ? Math.min(enemyLimit, 24 + chapter.index * 4 + (hunt ? 3 : 0) + (this.run.currentElite ? 3 : 0)) : enemyLimit;
+    if (this.run.nextEnemyMs <= 0 && this.enemies.length < tunedEnemyLimit) {
       const pressure = Math.max(0, this.run.wave - 1) + chapter.index * 1.2;
       const teaching = this.run.timeMs < GAME_CONFIG.lethalProtectionMs;
       this.run.nextEnemyMs = Math.max(hunt ? 210 : 290, GAME_CONFIG.enemySpawnMs - pressure * 58) * (teaching ? 1.55 : 1) * (hunt ? 0.58 : 1);
@@ -969,8 +948,8 @@ class SerpentLifeScene extends Phaser.Scene {
     const y = clamp(point.y, 80, GAME_CONFIG.arena - 80);
     const aura = this.add.image(x, y, "snake-glow").setTint(COLORS.reward);
     aura.setDisplaySize(type === "skill" ? 126 : 88, type === "skill" ? 126 : 88).setBlendMode(Phaser.BlendModes.ADD).setAlpha(type === "skill" ? 0.4 : 0.3);
-    const foodTexture = this.run?.memoryOverflow > 0 ? this.textureOr("pickup-memory-medium-v11", "pickup-memory-v9") : this.textureOr("pickup-memory-small-v11", "pickup-memory-v9");
-    const sprite = this.add.image(x, y, type === "skill" ? this.textureOr("pickup-skill-v11", "pickup-skill-v9") : foodTexture).setDisplaySize(type === "skill" ? 50 : this.run?.memoryOverflow > 0 ? 42 : 34, type === "skill" ? 50 : this.run?.memoryOverflow > 0 ? 42 : 34);
+    const foodTexture = this.run?.memoryOverflow > 0 ? this.textureOr("pickup-memory-medium-v11", "energy-bloom") : this.textureOr("pickup-memory-small-v11", "spark");
+    const sprite = this.add.image(x, y, type === "skill" ? this.textureOr("pickup-skill-v11", "energy-bloom") : foodTexture).setDisplaySize(type === "skill" ? 50 : this.run?.memoryOverflow > 0 ? 42 : 34, type === "skill" ? 50 : this.run?.memoryOverflow > 0 ? 42 : 34);
     this.tweens.add({ targets: aura, alpha: type === "skill" ? 0.54 : 0.4, duration: 900, yoyo: true, repeat: -1 });
     this.tweens.add({ targets: sprite, angle: 360, duration: type === "skill" ? 4200 : 5600, repeat: -1 });
     this.pickupLayer.add([aura, sprite]);
@@ -1375,11 +1354,11 @@ class SerpentLifeScene extends Phaser.Scene {
     const kind = forceKind ?? (chapter.index >= 2 && roll > 0.92 ? "sentinel" : roll > 0.86 ? "bloomer" : roll > 0.56 ? "hunter" : "drifter");
     const spec = ENEMY_KINDS[kind];
     const point = forcedPoint ?? randomNear(this.player ?? { x: GAME_CONFIG.arena / 2, y: GAME_CONFIG.arena / 2 }, 500, 780);
-    const texture = this.textureOr(`enemy-${kind}-v11`, this.textureOr(`enemy-${kind}-v9`, kind === "bloomer" ? "enemy-bloomer-v5" : kind === "hunter" ? "enemy-hunter-v5" : "enemy-drifter-v5"));
+    const texture = this.textureOr(`enemy-${kind}-v11`, "enemy-drifter-v11");
     const sprite = this.add.sprite(clamp(point.x, 70, GAME_CONFIG.arena - 70), clamp(point.y, 70, GAME_CONFIG.arena - 70), texture);
     const baseSize = (kind === "sentinel" ? 72 : kind === "bloomer" ? 64 : kind === "hunter" ? 48 : 40) * (mods.elite ? 1.28 : 1);
     sprite.setDisplaySize(baseSize, baseSize);
-    if (!String(texture).endsWith("-v9") && !String(texture).endsWith("-v11")) {
+    if (!String(texture).endsWith("-v11")) {
       if (kind === "hunter") sprite.setTint(0xff7fca);
       if (kind === "bloomer") sprite.setTint(0xe67bff);
     }
@@ -1502,7 +1481,7 @@ class SerpentLifeScene extends Phaser.Scene {
       x: this.player.x + Math.cos(this.player.angle) * 330,
       y: this.player.y + Math.sin(this.player.angle) * 330,
     };
-    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), this.textureOr("boss-elite-v11", this.textureOr(spec.texture, spec.fallbackTexture)));
+    const sprite = this.add.sprite(clamp(point.x, 120, GAME_CONFIG.arena - 120), clamp(point.y, 120, GAME_CONFIG.arena - 120), this.textureOr("boss-elite-v11", "enemy-sentinel-v11"));
     const size = spec.final ? 220 : spec.id === "crimson_molt" ? 188 : 168;
     sprite.setDisplaySize(size, size);
     const glow = this.add.image(sprite.x, sprite.y, "snake-glow").setTint(spec.color).setDisplaySize(size * 1.12, size * 1.12).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.28);
@@ -1729,7 +1708,7 @@ class SerpentLifeScene extends Phaser.Scene {
       const tail = this.getSegmentPoint(Math.min(this.run.segments - 1, 4 + level * 2)) ?? this.player;
       const length = 86 + level * 14 + (level >= 3 ? 22 : 0);
       const width = 24 + level * 4 + (level >= 5 ? 10 : 0);
-      const key = this.frameKey("v10-frost-trail", 8) ?? "vfx-frost-field-v5";
+      const key = this.frameKey("v10-frost-trail", 8) ?? "energy-bloom";
       const sprite = this.add.image(tail.x, tail.y, key);
       sprite.setDisplaySize(length, width);
       sprite.setRotation(tail.angle ?? this.player.angle);
@@ -1930,7 +1909,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.skillLayer.removeAll(true);
     const t = this.run.timeMs / 1000;
     const points = [];
-    for (let s = 0; s < Math.min(this.run.segments, 18); s += 1) {
+    for (let s = 0; s < Math.min(this.run.segments, LOW_POWER_RENDER ? 14 : 18); s += 1) {
       const p = this.getSegmentPoint(s);
       if (p) points.push(p);
     }
@@ -1973,7 +1952,7 @@ class SerpentLifeScene extends Phaser.Scene {
         frost.strokePath();
       }
       this.skillLayer.add(frost);
-      for (let s = 3; s < Math.min(this.run.segments, 17); s += 3) {
+      for (let s = 3; s < Math.min(this.run.segments, LOW_POWER_RENDER ? 13 : 17); s += LOW_POWER_RENDER ? 4 : 3) {
         const side = s % 2 === 0 ? 1 : -1;
         const ice = this.segmentAnchor(s, side, 18);
         const shard = this.add.triangle(ice.x, ice.y, 0, -7, 5, 6, -5, 6, COLORS.frost, 0.28);
@@ -1985,7 +1964,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
     const turretLevel = this.run.skills.turret;
     if (turretLevel > 0) {
-      const count = Math.min(3 + turretLevel, Math.ceil(this.run.segments / 4));
+      const count = Math.min(LOW_POWER_RENDER ? 4 : 3 + turretLevel, Math.ceil(this.run.segments / 4));
       for (let i = 0; i < count; i += 1) {
         const index = 1 + i * Math.max(2, Math.floor(this.run.segments / Math.max(1, count)));
         const mount = this.segmentAnchor(index, i % 2 === 0 ? 1 : -1, 20);
@@ -2002,7 +1981,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
     const shieldLevel = this.run.skills.shield;
     if (shieldLevel > 0) {
-      const count = Math.min(6, 2 + shieldLevel);
+      const count = Math.min(LOW_POWER_RENDER ? 4 : 6, 2 + shieldLevel);
       for (let i = 0; i < count; i += 1) {
         const index = Math.min(i, this.run.segments - 1);
         const side = i % 2 === 0 ? 1 : -1;
@@ -2028,7 +2007,7 @@ class SerpentLifeScene extends Phaser.Scene {
       const charge = this.add.graphics();
       charge.setBlendMode(Phaser.BlendModes.ADD);
       let prev = null;
-      for (let s = 1; s < Math.min(this.run.segments, 14); s += 3) {
+      for (let s = 1; s < Math.min(this.run.segments, LOW_POWER_RENDER ? 11 : 14); s += LOW_POWER_RENDER ? 4 : 3) {
         const p = this.getSegmentPoint(s);
         if (!p) continue;
         charge.fillStyle(COLORS.playerShot, 0.2 + Math.sin(t * 12 + s) * 0.06);
@@ -2191,18 +2170,19 @@ class SerpentLifeScene extends Phaser.Scene {
       const size = i === 0 ? 19 : isTail ? 14 + taper * 4 : 13 + taper * 6;
       const alpha = i === 0 ? 1 : clamp(0.82 - i * 0.018, 0.46, 0.82);
       const isMemory = i > 0 && i % 4 === 0 && !isTail;
-      const glow = this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : isMemory ? COLORS.reward : COLORS.jade);
-      glow.setDisplaySize(size * (i === 0 ? 3.9 : 2.65), size * (i === 0 ? 3.9 : 2.65)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.5 : isMemory ? 0.24 : 0.14);
+      const shouldGlow = !LOW_POWER_RENDER || i === 0 || isTail || isMemory || i % 3 === 0;
+      const glow = shouldGlow ? this.add.image(p.x, p.y, "snake-glow").setTint(hurt ? COLORS.rose : isMemory ? COLORS.reward : COLORS.jade) : null;
+      if (glow) glow.setDisplaySize(size * (i === 0 ? 3.9 : 2.65), size * (i === 0 ? 3.9 : 2.65)).setBlendMode(Phaser.BlendModes.ADD).setAlpha(i === 0 ? 0.5 : isMemory ? 0.24 : 0.14);
       if (i === 0) {
-        const body = this.add.image(p.x, p.y, this.textureOr("snake-head-v11", this.textureOr("snake-head-v10", "snake-head-v9")));
+        const body = this.add.image(p.x, p.y, this.textureOr("snake-head-v11", "snake-glow"));
         const headAngle = p.angle ?? this.player.angle;
         body.setRotation(headAngle + Math.PI / 2);
         body.setDisplaySize(72, 72);
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
-        this.snakeLayer.add([glow, body]);
+        this.snakeLayer.add(glow ? [glow, body] : [body]);
       } else {
-        const texture = isTail ? this.textureOr("snake-tail-v11", this.textureOr("snake-tail-v10", "snake-tail-v9")) : isMemory ? this.textureOr("snake-memory-v11", this.textureOr("snake-memory-v10", "snake-memory-v9")) : this.textureOr("snake-body-v11", this.textureOr("snake-body-v10", "snake-body-v9"));
+        const texture = isTail ? this.textureOr("snake-tail-v11", "snake-body-v11") : isMemory ? this.textureOr("snake-memory-v11", "snake-body-v11") : this.textureOr("snake-body-v11", "snake-glow");
         const displayX = isTail ? 42 + taper * 14 : isMemory ? 40 + taper * 9 : 34 + taper * 8;
         const displayY = isTail ? 32 + taper * 10 : isMemory ? 40 + taper * 9 : 34 + taper * 8;
         const body = this.add.image(p.x, p.y, texture);
@@ -2210,22 +2190,24 @@ class SerpentLifeScene extends Phaser.Scene {
         body.setRotation((p.angle ?? this.player.angle) + (isTail ? 0 : Math.PI / 2));
         body.setAlpha(alpha);
         body.setTint(hurt ? 0xffd7e3 : 0xffffff);
-        const detail = this.add.graphics();
-        detail.setPosition(p.x, p.y);
-        detail.setRotation(p.angle ?? this.player.angle);
-        detail.setBlendMode(Phaser.BlendModes.ADD);
-        detail.lineStyle(isMemory ? 3 : 2, isMemory ? COLORS.gold : COLORS.jade, isMemory ? 0.34 : 0.14);
-        detail.beginPath();
-        detail.moveTo(-displayX * 0.28, 0);
-        detail.lineTo(displayX * 0.28, 0);
-        detail.strokePath();
-        if (isMemory) {
-          detail.lineStyle(2, COLORS.reward, 0.42);
-          detail.strokeCircle(0, 0, Math.min(displayX, displayY) * 0.36);
-          detail.fillStyle(COLORS.reward, 0.24);
-          detail.fillCircle(0, 0, 5);
+        const detail = !LOW_POWER_RENDER || isMemory ? this.add.graphics() : null;
+        if (detail) {
+          detail.setPosition(p.x, p.y);
+          detail.setRotation(p.angle ?? this.player.angle);
+          detail.setBlendMode(Phaser.BlendModes.ADD);
+          detail.lineStyle(isMemory ? 3 : 2, isMemory ? COLORS.gold : COLORS.jade, isMemory ? 0.34 : 0.14);
+          detail.beginPath();
+          detail.moveTo(-displayX * 0.28, 0);
+          detail.lineTo(displayX * 0.28, 0);
+          detail.strokePath();
+          if (isMemory) {
+            detail.lineStyle(2, COLORS.reward, 0.42);
+            detail.strokeCircle(0, 0, Math.min(displayX, displayY) * 0.36);
+            detail.fillStyle(COLORS.reward, 0.24);
+            detail.fillCircle(0, 0, 5);
+          }
         }
-        this.snakeLayer.add([glow, body, detail]);
+        this.snakeLayer.add([glow, body, detail].filter(Boolean));
       }
     }
     this.snakeLayer.setDepth(30);
@@ -2244,10 +2226,14 @@ class SerpentLifeScene extends Phaser.Scene {
     const overload = this.run.memoryOverflow ? ` · 过载${this.run.memoryOverflow}` : "";
     if (this.dom.chapter) this.dom.chapter.textContent = `${chapter.name} · ${this.nextBossSpec()?.name ?? "终局完成"}`;
     this.dom.meta.textContent = `${stage.name.slice(0, 1)} ${this.run.segments}/${GAME_CONFIG.maxSegments} ${Math.floor(this.run.timeMs / 1000)}s ${this.run.kills}杀${overload}${cracks}${event}${elite}${protect}`;
-    this.dom.skills.innerHTML = SKILLS.map((skill) => {
-      const lv = this.run.skills[skill.id];
-      return `<span class="${lv ? "is-on" : ""}"><img src="${this.skillIconAssetPath(skill)}" alt="">${lv || ""}</span>`;
-    }).join("");
+    const skillSignature = SKILLS.map((skill) => this.run.skills[skill.id]).join("|");
+    if (this.lastSkillSignature !== skillSignature) {
+      this.lastSkillSignature = skillSignature;
+      this.dom.skills.innerHTML = SKILLS.map((skill) => {
+        const lv = this.run.skills[skill.id];
+        return `<span class="${lv ? "is-on" : ""}"><img src="${this.skillIconAssetPath(skill)}" alt="">${lv || ""}</span>`;
+      }).join("");
+    }
     const awakenPct = this.boss ? 1 : this.bossProgress();
     this.dom.progress.style.width = `${Math.round(awakenPct * 100)}%`;
     if (this.dom.bossBar && this.dom.bossHp && this.dom.bossLabel) {
@@ -2449,14 +2435,16 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   addFireRingImage(x, y, size, level = 1, alpha = 0.55) {
-    const useV8 = this.textures.exists("fire-circle-v8");
-    if (!useV8 && !this.textures.exists("vfx-fire-ring-v5")) return;
-    const image = useV8 ? this.add.sprite(x, y, "fire-circle-v8", Math.floor(Math.random() * 64)) : this.add.image(x, y, "vfx-fire-ring-v5");
-    const display = useV8 ? size * (level >= 4 ? 3.1 : 2.75) : size * (level >= 4 ? 1.16 : 1);
+    if (!this.textures.exists("vfx-fire-ring-v5")) {
+      this.addRing(x, y, size * 1.2, level >= 3 ? COLORS.gold : COLORS.ember, alpha * 0.72);
+      return;
+    }
+    const image = this.add.image(x, y, "vfx-fire-ring-v5");
+    const display = size * (level >= 4 ? 1.16 : 1);
     image.setDisplaySize(display, display);
-    if (!useV8) image.setTint(level >= 3 ? COLORS.gold : COLORS.ember);
+    image.setTint(level >= 3 ? COLORS.gold : COLORS.ember);
     image.setBlendMode(Phaser.BlendModes.ADD);
-    image.setAlpha(useV8 ? Math.min(0.86, alpha + 0.16) : alpha);
+    image.setAlpha(alpha);
     image.setRotation(Math.random() * TWO_PI);
     this.fxLayer.add(image);
     this.tweens.add({
@@ -2576,16 +2564,15 @@ class SerpentLifeScene extends Phaser.Scene {
 
   addBolt(x1, y1, x2, y2, color, width = 2.4, alpha = 0.48) {
     const chainKey = this.frameKey("v10-chain-arc", 8);
-    if (chainKey || this.textures.exists("lightning-bolt-v8")) {
+    if (chainKey) {
       const midX = (x1 + x2) / 2;
       const midY = (y1 + y2) / 2;
       const length = Phaser.Math.Distance.Between(x1, y1, x2, y2);
-      const sprite = this.add.image(midX, midY, chainKey ?? "lightning-bolt-v8");
+      const sprite = this.add.image(midX, midY, chainKey);
       sprite.setDisplaySize(Math.max(64, length * 0.96), Math.max(20, width * 9));
       sprite.setRotation(Phaser.Math.Angle.Between(x1, y1, x2, y2));
       sprite.setBlendMode(Phaser.BlendModes.ADD);
-      if (!chainKey) sprite.setTint(COLORS.cyan);
-      sprite.setAlpha(Math.min(chainKey ? 0.72 : 0.42, alpha * (chainKey ? 1.1 : 0.78)));
+      sprite.setAlpha(Math.min(0.72, alpha * 1.1));
       this.fxLayer.add(sprite);
       this.tweens.add({
         targets: sprite,
@@ -2617,7 +2604,7 @@ class SerpentLifeScene extends Phaser.Scene {
     bloom.setDisplaySize(16, 16).setAlpha(alpha);
     this.fxLayer.add(bloom);
     this.tweens.add({ targets: bloom, displayWidth: radius * 2, displayHeight: radius * 2, alpha: 0, duration: 360, ease: "Cubic.out", onComplete: () => bloom.destroy() });
-    this.addSpark(x, y, color, 10, 0.85);
+    this.addSpark(x, y, color, LOW_POWER_RENDER ? 6 : 10, 0.85);
   }
 
   playImpact(x, y, color = COLORS.rose, scale = 0.7) {
@@ -2628,7 +2615,8 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   addSpark(x, y, color, count, power) {
-    for (let i = 0; i < count; i += 1) {
+    const sparkCount = LOW_POWER_RENDER ? Math.max(1, Math.ceil(count * 0.62)) : count;
+    for (let i = 0; i < sparkCount; i += 1) {
       const a = Math.random() * TWO_PI;
       const d = (14 + Math.random() * 40) * power;
       const dot = this.add.circle(x, y, 3 + Math.random() * 3, color, 0.9);
