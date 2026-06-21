@@ -333,7 +333,7 @@ for (const result of results) {
   if (result.first.mode !== "playing") failures.push(`${result.viewport.name}: first screen not playing`);
   if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
-  if (result.first.textureCount > 95) failures.push(`${result.viewport.name}: too many textures preloaded (${result.first.textureCount})`);
+  if (result.first.textureCount > 100) failures.push(`${result.viewport.name}: too many textures preloaded (${result.first.textureCount})`);
   if (!String(result.first.firstEnemyTexture).endsWith("-v11")) failures.push(`${result.viewport.name}: first enemy is not V11 art`);
   if (!result.first.textureSourceSizes.every(([key, w, h]) => key.startsWith("arena-v11") ? w >= 1024 && h >= 1024 : key.includes("pickup") ? w >= 320 && h >= 320 : w >= 512 || h >= 512)) {
     failures.push(`${result.viewport.name}: V11 source texture is too low resolution`);

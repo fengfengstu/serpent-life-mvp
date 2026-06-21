@@ -582,16 +582,16 @@ button {
   }
 
   .ui-ending-panel {
-    padding: 14px 14px;
+    padding: 10px 12px;
   }
 
   .ui-title.small {
-    font-size: 25px;
+    font-size: 23px;
   }
 
   .ui-memory-list {
-    gap: 5px;
-    margin: 10px 0;
+    gap: 4px;
+    margin: 8px 0;
   }
 
   .ui-memory-list span {
@@ -601,18 +601,20 @@ button {
   }
 
   .ui-life-text {
-    margin: 10px 0;
-    font-size: 14px;
-    line-height: 1.42;
+    margin: 8px 0;
+    font-size: 13px;
+    line-height: 1.35;
   }
 
   .ui-final {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    line-height: 1.28;
   }
 
   .ui-button {
-    min-height: 46px;
-    font-size: 18px;
+    min-height: 42px;
+    font-size: 17px;
   }
 }
 
