@@ -98,6 +98,13 @@ button {
   margin-top: min(31vh, 280px);
 }
 
+.ui-level-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .ui-kicker {
   margin: 0 0 8px;
   color: #ffd166;

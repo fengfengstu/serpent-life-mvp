@@ -1,9 +1,9 @@
 export const GAME_CONFIG = {
   arena: 3000,
   maxFrameDelta: 34,
-  initialCoreHp: 3,
-  initialSegments: 3,
-  maxSegments: 44,
+  initialCoreHp: 1,
+  initialSegments: 12,
+  maxSegments: 56,
   segmentGap: 13,
   baseSpeed: 188,
   baseTurnRate: 7.2,

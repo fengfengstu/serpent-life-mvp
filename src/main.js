@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { BOSS_STAGES, CHAPTERS, COLORS, ELITE_EVENTS, ENEMY_KINDS, GAME_CONFIG, GROWTH_STAGES, LIFE_TEMPLATES, MEMORY_LINES, RELIC_POOL, SKILLS, SURPRISE_EVENTS } from "./config.js";
+import { V13_BALANCE, V13_LEVELS, v13GrowthCost, v13LevelById, v13SkillCost, v13SkillXpCost } from "./v13-balance.js";
 
 const W = 390;
 const H = 844;
@@ -275,8 +276,13 @@ class SerpentLifeScene extends Phaser.Scene {
         <div class="ui-panel ui-menu-panel">
           <p class="ui-kicker">5.5 GDD MVP</p>
           <h1 class="ui-title">此生为蛇</h1>
-          <p class="ui-subtitle">越贪越强，越贪越险。拖动控制蛇首，吞噬记忆，构筑技能，在死亡后读完这一生。</p>
-          <button class="ui-button" data-action="start">开始这一生</button>
+          <p class="ui-subtitle">身体就是生命、资源和武器。吞噬记忆增长，拾取技能珠后决定是否消耗身体净化技能。</p>
+          <button class="ui-button" data-action="start">第一关：灰林边境</button>
+          <button class="ui-button ghost" data-action="start-tutorial">教学关</button>
+          <div class="ui-level-row">
+            <button class="ui-button ghost" data-action="start-level2">第二关</button>
+            <button class="ui-button ghost" data-action="start-level3">第三关</button>
+          </div>
         </div>
       </section>
       <section data-screen="hud" class="ui-hud ui-hidden">
@@ -332,8 +338,11 @@ class SerpentLifeScene extends Phaser.Scene {
     this.dom.endingKicker = this.dom.root.querySelector("[data-bind='ending-kicker']");
     this.dom.endingTitle = this.dom.root.querySelector("[data-bind='ending-title']");
 
-    this.bindDomAction("start", () => this.startRun());
-    this.bindDomAction("retry", () => this.startRun());
+    this.bindDomAction("start", () => this.startRun("level1"));
+    this.bindDomAction("start-tutorial", () => this.startRun("tutorial"));
+    this.bindDomAction("start-level2", () => this.startRun("level2"));
+    this.bindDomAction("start-level3", () => this.startRun("level3"));
+    this.bindDomAction("retry", () => this.startRun(this.run?.levelId ?? "level1"));
     this.bindDomAction("menu", () => this.buildMenu());
     this.bindDomAction("pause", () => this.pauseRun());
     this.bindDomAction("resume", () => this.resumeRun());
@@ -466,6 +475,7 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   arenaTextureForChapter(chapter = this.chapterForTime()) {
+    if (chapter.id === "tutorial") return this.textureOr("arena-v11-tutorial", "arena-v11-ch1");
     if (chapter.index <= 0) return this.textureOr("arena-v11-ch1", "arena-bg");
     if (chapter.index === 1) return this.textureOr("arena-v11-ch2", "arena-v11-ch1");
     return this.textureOr("arena-v11-ch3", "arena-v11-ch1");
@@ -480,6 +490,12 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   chapterForTime(timeMs = this.run?.timeMs ?? 0) {
+    if (this.run?.v13) {
+      const level = this.currentV13Level();
+      const index = Math.max(0, (this.run.levelIndex ?? 1) - 1);
+      const chapter = CHAPTERS[Math.min(index, CHAPTERS.length - 1)] ?? CHAPTERS[0];
+      return { ...chapter, id: level.id, name: level.name, shortName: level.shortName, index };
+    }
     let chapter = CHAPTERS[0];
     let index = 0;
     CHAPTERS.forEach((candidate, i) => {
@@ -508,12 +524,33 @@ class SerpentLifeScene extends Phaser.Scene {
 
   nextBossSpec() {
     if (!this.run) return null;
+    if (this.run.v13) {
+      const level = this.currentV13Level();
+      const base = BOSS_STAGES.find((spec) => spec.id === level.bossId) ?? BOSS_STAGES[0];
+      if (level.id === "tutorial") {
+        return {
+          ...base,
+          id: "tutorial_husk",
+          name: "残忆蛇影",
+          hp: 150,
+          shield: 0,
+          spawnMs: level.bossSpawnMs,
+          spawnKills: 9999,
+          radius: 50,
+          speed: 54,
+          color: COLORS.cyan,
+          projectileColor: COLORS.frost,
+          rewardText: "残忆蛇影散开，你已经掌握了吞噬、成长与净化。",
+        };
+      }
+      return { ...base, spawnMs: level.bossSpawnMs, spawnKills: 9999, final: level.id === "level3" };
+    }
     return BOSS_STAGES.find((spec) => !this.run.clearedBosses.includes(spec.id)) ?? null;
   }
 
   bossProgress(spec = this.nextBossSpec()) {
     if (!spec) return 1;
-    const timePct = spec.spawnMs ? this.run.timeMs / spec.spawnMs : 0;
+    const timePct = spec.spawnMs ? (this.run.v13 ? (this.run.levelElapsedMs ?? this.run.timeMs) : this.run.timeMs) / spec.spawnMs : 0;
     const killPct = spec.spawnKills ? this.run.kills / spec.spawnKills : 0;
     return clamp(Math.max(timePct, killPct), 0, 1);
   }
@@ -536,16 +573,34 @@ class SerpentLifeScene extends Phaser.Scene {
     this.cameraTarget = null;
   }
 
-  startRun() {
+  currentV13Level() {
+    return v13LevelById(this.run?.levelId ?? "level1");
+  }
+
+  v13LevelIndex(id) {
+    return Math.max(0, V13_LEVELS.findIndex((level) => level.id === id));
+  }
+
+  startRun(levelId = "level1") {
     this.mode = "playing";
     this.clearGameObjects();
     this.showDom("playing");
     this.startCombatMusic();
 
+    const level = v13LevelById(levelId);
     this.run = {
+      v13: true,
+      levelId: level.id,
+      levelIndex: this.v13LevelIndex(level.id),
+      levelElapsedMs: 0,
       timeMs: 0,
       coreHp: GAME_CONFIG.initialCoreHp,
-      segments: GAME_CONFIG.initialSegments,
+      segments: V13_BALANCE.initialSegments,
+      mxp: 0,
+      sxp: 0,
+      nextGrowthCost: v13GrowthCost(V13_BALANCE.initialSegments),
+      firstSkillCoreGiven: false,
+      heldSkillCores: 0,
       score: 0,
       kills: 0,
       wave: 1,
@@ -557,7 +612,7 @@ class SerpentLifeScene extends Phaser.Scene {
       bossSpawned: false,
       bossDefeated: false,
       nextFoodMs: 0,
-      nextSkillMs: GAME_CONFIG.skillFirstDropMs,
+      nextSkillMs: level.firstSkillCoreMs,
       lastSkillDropKills: 0,
       skillDropCount: 0,
       nextEnemyMs: 0,
@@ -579,7 +634,7 @@ class SerpentLifeScene extends Phaser.Scene {
       recentSurprises: [],
       pendingRareCore: 0,
       pendingUpgrade: null,
-      lastUpgradeMs: -GAME_CONFIG.minUpgradeGapMs,
+      lastUpgradeMs: -V13_BALANCE.skill.minCardGapMs,
       upgradeCount: 0,
       comboHighlights: [],
       buildSequence: [],
@@ -638,11 +693,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.fxLayer.setDepth(20);
     this.snakeLayer.setDepth(30);
 
-    [80, 148, 248].forEach((offset) => this.spawnPickup("food", this.player.x + offset, this.player.y + Phaser.Math.Between(-22, 22)));
-    for (let i = 0; i < 8; i += 1) this.spawnPickup("food");
-    this.spawnEnemy("drifter", { x: this.player.x + 155, y: this.player.y - 76 });
-    this.spawnEnemy("drifter", { x: this.player.x + 138, y: this.player.y + 108 });
-    this.spawnEnemy("hunter", { x: this.player.x + 188, y: this.player.y + 28 });
+    [86, 162, 252].forEach((offset) => this.spawnPickup("food", this.player.x + offset, this.player.y + Phaser.Math.Between(-22, 22)));
+    for (let i = 0; i < 7; i += 1) this.spawnPickup("food");
 
     this.buildHud();
     this.cameraTarget = this.add.zone(this.player.x, this.player.y, 1, 1);
@@ -650,7 +702,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.forceCameraToPlayer();
     this.cameras.main.startFollow(this.cameraTarget, true, 0.12, 0.12);
     this.forceCameraToPlayer();
-    this.addMemory("出生时，它只有三节身体和三颗心。", "birth");
+    this.addMemory(level.id === "tutorial" ? "教学开始：先拖动蛇首，吞噬发光记忆，让身体变长。" : `进入「${level.name}」：身体就是生命，也是净化技能的代价。`, "birth");
     this.renderSkillAuras();
     this.drawSnake();
     this.updateHud();
@@ -726,6 +778,7 @@ class SerpentLifeScene extends Phaser.Scene {
     const ms = Math.min(delta, GAME_CONFIG.maxFrameDelta);
     const dt = ms / 1000;
     this.run.timeMs += ms;
+    this.run.levelElapsedMs = (this.run.levelElapsedMs ?? 0) + ms;
     if (this.run.timeMs < 120) this.forceCameraToPlayer();
     this.run.invulnMs = Math.max(0, this.run.invulnMs - ms);
     this.run.bodyHitCooldownMs = Math.max(0, this.run.bodyHitCooldownMs - ms);
@@ -865,6 +918,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.nextEliteMs -= ms;
     const chapter = this.updateChapterState();
     this.run.wave = 1 + Math.floor(this.run.timeMs / 42000);
+    const level = this.currentV13Level();
+    const levelElapsed = this.run.levelElapsedMs ?? this.run.timeMs;
 
     const memoryRain = this.run.currentEvent?.id === "memory_rain";
     const hunt = this.run.currentEvent?.id === "hunt";
@@ -873,17 +928,20 @@ class SerpentLifeScene extends Phaser.Scene {
       this.run.nextFoodMs = memoryRain ? Math.max(260, GAME_CONFIG.foodSpawnMs * 0.48) : Math.max(460, GAME_CONFIG.foodSpawnMs - chapter.index * 35);
       this.spawnPickup("food");
     }
-    if (this.run.nextSkillMs <= 0 && !this.run.pendingUpgrade && this.pickups.filter((p) => p.type === "skill").length < 1) {
-      this.spawnPickup("skill");
-      this.markSkillDrop("field");
+    const levelCostIndex = Math.max(0, this.run.levelIndex - 1);
+    if (!this.run.firstSkillCoreGiven && levelElapsed >= level.firstSkillCoreMs && this.run.sxp >= Math.floor(v13SkillXpCost(this.run.upgradeCount, levelCostIndex) * 0.72)) {
+      this.trySpawnSkillPickup("first_core");
+      this.run.firstSkillCoreGiven = true;
+    } else {
+      this.tryProgressSkillCore();
     }
     const chapterPressure = chapter.index * 4;
-    const enemyLimit = 11 + this.run.wave * 2 + chapterPressure + (hunt ? 6 : 0) + (this.run.currentElite ? 4 : 0);
+    const enemyLimit = level.enemyCapBase + Math.floor(this.run.wave * level.enemyCapGrowth) + chapterPressure + (hunt ? 6 : 0) + (this.run.currentElite ? 4 : 0);
     const tunedEnemyLimit = LOW_POWER_RENDER ? Math.min(enemyLimit, 24 + chapter.index * 4 + (hunt ? 3 : 0) + (this.run.currentElite ? 3 : 0)) : enemyLimit;
-    if (this.run.nextEnemyMs <= 0 && this.enemies.length < tunedEnemyLimit) {
+    if (levelElapsed >= level.enemyGraceMs && this.run.nextEnemyMs <= 0 && this.enemies.length < tunedEnemyLimit) {
       const pressure = Math.max(0, this.run.wave - 1) + chapter.index * 1.2;
-      const teaching = this.run.timeMs < GAME_CONFIG.lethalProtectionMs;
-      this.run.nextEnemyMs = Math.max(hunt ? 210 : 290, GAME_CONFIG.enemySpawnMs - pressure * 58) * (teaching ? 1.55 : 1) * (hunt ? 0.58 : 1);
+      const teaching = levelElapsed < level.protectionMs;
+      this.run.nextEnemyMs = Math.max(hunt ? 210 : 290, level.enemySpawnMs - pressure * 58) * (teaching ? 1.55 : 1) * (hunt ? 0.58 : 1);
       const eventKind = hunt && Math.random() < 0.68 ? "hunter" : this.run.currentElite?.id === "idol_edict" && Math.random() < 0.26 ? "sentinel" : undefined;
       this.spawnEnemy(teaching && Math.random() < 0.72 ? "drifter" : eventKind);
     }
@@ -891,7 +949,7 @@ class SerpentLifeScene extends Phaser.Scene {
       this.triggerEliteEvent();
     }
     const nextBoss = this.nextBossSpec();
-    if (!this.boss && nextBoss && (this.run.timeMs >= nextBoss.spawnMs || this.run.kills >= nextBoss.spawnKills)) {
+    if (!this.boss && nextBoss && levelElapsed >= nextBoss.spawnMs) {
       this.spawnBoss(nextBoss);
     }
   }
@@ -1000,13 +1058,14 @@ class SerpentLifeScene extends Phaser.Scene {
     if (!this.run) return;
     this.run.lastSkillDropKills = this.run.kills;
     this.run.skillDropCount += 1;
-    this.run.nextSkillMs = this.nextSkillDropDelay(source);
+    this.run.nextSkillMs = V13_BALANCE.skill.minCardGapMs;
   }
 
   trySpawnSkillPickup(source = "field") {
     if (this.run?.pendingUpgrade) return false;
     if (this.pickups.filter((p) => p.type === "skill").length >= 1) return false;
     this.spawnPickup("skill");
+    this.run.firstSkillCoreGiven = true;
     this.markSkillDrop(source);
     return true;
   }
@@ -1041,9 +1100,19 @@ class SerpentLifeScene extends Phaser.Scene {
   collectFood(index) {
     const p = this.pickups[index];
     this.destroyPickup(index);
-    if (this.run.segments < GAME_CONFIG.maxSegments) {
+    const reward = this.rollMemoryReward();
+    this.run.mxp += reward.mxp;
+    this.awardSkillXp(reward.sxp, "memory");
+    if (reward.healCracks) this.run.bodyCracks = Math.max(0, this.run.bodyCracks - reward.healCracks);
+    if (reward.overload) this.run.memoryOverflow += reward.overload;
+    let grew = 0;
+    while (this.run.mxp >= v13GrowthCost(this.run.segments) && this.run.segments < V13_BALANCE.maxSegments) {
+      const cost = v13GrowthCost(this.run.segments);
+      this.run.mxp -= cost;
       this.run.segments += 1;
-    } else {
+      grew += 1;
+    }
+    if (this.run.segments >= V13_BALANCE.maxSegments && reward.mxp > 0 && !grew) {
       this.run.memoryOverflow += 1;
       this.run.greedPressure += 1;
     }
@@ -1051,10 +1120,36 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addMemory(pick(MEMORY_LINES), "food");
     this.addBurst(p.x, p.y, COLORS.reward, 56, 0.24);
     if ((this.run.skills.magnet ?? 0) > 0) this.addBitmapFx("v10-magnet-burst", 4, p.x, p.y, { size: 72 + this.run.skills.magnet * 8, alpha: 0.58, duration: 300 });
-    this.floatText(p.x, p.y, this.run.segments >= GAME_CONFIG.maxSegments ? `过载 +${this.run.memoryOverflow}` : "+1 记忆", COLORS.reward);
+    this.floatText(p.x, p.y, grew ? `身体 +${grew}` : `记忆 +${reward.mxp}`, COLORS.reward);
     this.playEatSound();
     this.updateGrowthStage(p);
     if (this.run.memoryOverflow > 0 && this.run.memoryOverflow % 6 === 0) this.queueUpgrade("overload");
+  }
+
+  rollMemoryReward() {
+    const entries = Object.entries(V13_BALANCE.memory).filter(([, spec]) => typeof spec === "object" && spec.weight);
+    const total = entries.reduce((sum, [, spec]) => sum + spec.weight, 0);
+    let roll = Math.random() * total;
+    for (const [, spec] of entries) {
+      roll -= spec.weight;
+      if (roll <= 0) return spec;
+    }
+    return V13_BALANCE.memory.small;
+  }
+
+  awardSkillXp(amount = 0, source = "memory") {
+    if (!this.run || amount <= 0) return;
+    this.run.sxp += amount;
+    this.tryProgressSkillCore(source);
+  }
+
+  tryProgressSkillCore(source = "progress") {
+    if (!this.run || this.run.pendingUpgrade) return false;
+    if (this.pickups.filter((p) => p.type === "skill").length >= V13_BALANCE.skill.fieldCoreLimit) return false;
+    const cost = v13SkillXpCost(this.run.upgradeCount, Math.max(0, this.run.levelIndex - 1));
+    if (this.run.sxp < cost) return false;
+    this.run.sxp -= cost;
+    return this.trySpawnSkillPickup(source);
   }
 
   collectSkillPickup(index) {
@@ -1082,8 +1177,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addRing(point.x, point.y, 160, COLORS.gold, 0.36);
     this.playComboSound("growth");
     if (stage.id !== "overload") {
-      this.run.nextSkillMs = Math.min(this.run.nextSkillMs, 9000);
-      this.floatText(point.x, point.y - 82, "新的技能核正在靠近", COLORS.cyan);
+      this.awardSkillXp(2, "growth");
+      this.floatText(point.x, point.y - 82, "技能进度 +2", COLORS.cyan);
     }
   }
 
@@ -1109,7 +1204,7 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   canOpenUpgradeNow() {
-    return this.mode === "playing" && this.run.timeMs - this.run.lastUpgradeMs >= GAME_CONFIG.minUpgradeGapMs;
+    return this.mode === "playing" && this.run.timeMs - this.run.lastUpgradeMs >= V13_BALANCE.skill.minCardGapMs;
   }
 
   isPlayerInImmediateDanger() {
@@ -1238,7 +1333,7 @@ class SerpentLifeScene extends Phaser.Scene {
     candidates.forEach((event) => {
       let weight = event.rarity === "rare" ? 2 : 4;
       if (this.run.growthStage === "final_molt" || this.run.memoryOverflow > 0) weight += 2;
-      if (event.id === "greed_gate" && this.run.coreHp <= 1) weight -= 1;
+      if (event.id === "greed_gate" && this.run.segments <= V13_BALANCE.safeAfterSkillSegments + 2) weight -= 1;
       if (event.id === "safe_void" && this.enemies.length > 8) weight += 3;
       if (source === "card") weight += 1;
       for (let i = 0; i < Math.max(1, weight); i += 1) weighted.push(event);
@@ -1262,8 +1357,8 @@ class SerpentLifeScene extends Phaser.Scene {
       this.run.bodyCracks = Math.max(0, this.run.bodyCracks - 1);
     }
     if (relic.id === "broken_tail") {
-      this.run.segments = Math.max(GAME_CONFIG.initialSegments, this.run.segments - 3);
-      this.run.coreHp = Math.min(GAME_CONFIG.initialCoreHp, this.run.coreHp + 1);
+      this.run.segments = Math.max(V13_BALANCE.safeAfterSkillSegments, this.run.segments - 3);
+      this.run.bodyCracks = 0;
       this.trySpawnSkillPickup("relic");
     }
     if (relic.id === "magnetic_scales") {
@@ -1279,9 +1374,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addMemory(`意外发生：「${event.name}」。`, "surprise");
     this.floatText(this.player.x, this.player.y - 72, event.name, event.rarity === "rare" ? COLORS.dangerCore : COLORS.cyan);
     if (event.id === "double_core") {
-      this.run.bodyCracks = Math.min(GAME_CONFIG.bodyCrackLimit, this.run.bodyCracks + 1);
-      this.run.nextSkillMs = Math.min(this.run.nextSkillMs, 6000);
-      this.queueUpgrade("skill", { defer: true });
+      this.run.bodyCracks = Math.min(V13_BALANCE.crackLimit, this.run.bodyCracks + 1);
+      this.awardSkillXp(v13SkillXpCost(this.run.upgradeCount, Math.max(0, this.run.levelIndex - 1)), "double_core");
     } else if (event.id === "greed_gate") {
       for (let i = 0; i < 10; i += 1) this.spawnPickup("food");
       this.run.currentEvent = { id: "hunt", name: "围猎潮", color: COLORS.rose };
@@ -1309,8 +1403,7 @@ class SerpentLifeScene extends Phaser.Scene {
       });
       this.run.greedPressure += 1;
     } else if (choice.id === "tailcut") {
-      this.run.segments = Math.max(GAME_CONFIG.initialSegments, this.run.segments - 4);
-      this.run.coreHp = Math.min(GAME_CONFIG.initialCoreHp, this.run.coreHp + 1);
+      this.run.segments = Math.max(V13_BALANCE.safeAfterSkillSegments, this.run.segments - 4);
       this.run.bodyCracks = 0;
       this.addMemory("它主动断尾，把贪婪换成一次呼吸。", "overload");
     }
@@ -1318,11 +1411,11 @@ class SerpentLifeScene extends Phaser.Scene {
 
   skillBodyCost(skill) {
     const current = this.run.skills[skill.id] ?? 0;
-    return Math.min(9, (skill.cost ?? 2) + Math.floor(current * 1.25));
+    return v13SkillCost(current + 1);
   }
 
   canPaySkillCost(cost) {
-    return this.run.segments - cost >= GAME_CONFIG.initialSegments;
+    return this.run.segments - cost >= V13_BALANCE.safeAfterSkillSegments;
   }
 
   applySkill(skill) {
@@ -1337,7 +1430,7 @@ class SerpentLifeScene extends Phaser.Scene {
       this.playBodyBlockSound(false);
       return;
     }
-    this.run.segments = Math.max(GAME_CONFIG.initialSegments, this.run.segments - cost);
+    this.run.segments = Math.max(V13_BALANCE.safeAfterSkillSegments, this.run.segments - cost);
     this.run.skills[skill.id] += 1;
     if (!this.run.selectedSlots.includes(skill.id) && this.run.selectedSlots.length < 5) this.run.selectedSlots.push(skill.id);
     this.run.buildSequence.push(skill.id);
@@ -1349,6 +1442,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addBurst(this.player.x, this.player.y, COLORS.gold, 150, 0.3);
     this.triggerSkillSurge(skill);
     this.playUpgradeSound();
+    this.run.invulnMs = Math.max(this.run.invulnMs, V13_BALANCE.postCardProtectionMs);
   }
 
   triggerSkillSurge(skill) {
@@ -1524,12 +1618,12 @@ class SerpentLifeScene extends Phaser.Scene {
     if (this.run.bodyHitCooldownMs > 0) return;
     this.run.bodyHitCooldownMs = GAME_CONFIG.bodyHitCooldownMs;
     const guarded = this.hasCombo("wall") || this.run.skills.shield >= 3;
-    if (!guarded) this.run.bodyCracks = Math.min(GAME_CONFIG.bodyCrackLimit, this.run.bodyCracks + 1);
+    if (!guarded) this.run.bodyCracks = Math.min(V13_BALANCE.crackLimit, this.run.bodyCracks + 1);
     this.addBodyCrackFx(hit.point, guarded);
     this.playBodyBlockSound(guarded);
-    this.floatText(hit.point.x, hit.point.y - 20, guarded ? "鳞甲反震" : `裂痕 ${this.run.bodyCracks}/${GAME_CONFIG.bodyCrackLimit}`, guarded ? COLORS.gold : COLORS.rose);
-    if (this.run.bodyCracks >= GAME_CONFIG.bodyCrackLimit && this.run.segments > GAME_CONFIG.initialSegments) {
-      this.run.segments -= 1;
+    this.floatText(hit.point.x, hit.point.y - 20, guarded ? "鳞甲反震" : `裂痕 ${this.run.bodyCracks}/${V13_BALANCE.crackLimit}`, guarded ? COLORS.gold : COLORS.rose);
+    if (this.run.bodyCracks >= V13_BALANCE.crackLimit && this.run.segments > V13_BALANCE.deathSegments + V13_BALANCE.bodyCrackSegmentLoss) {
+      this.run.segments -= V13_BALANCE.bodyCrackSegmentLoss;
       this.run.bodyCracks = 0;
       this.screenShake = Math.max(this.screenShake, 7);
       this.addMemory("身体裂痕崩开，一节记忆脱落。", "body_crack");
@@ -1557,10 +1651,7 @@ class SerpentLifeScene extends Phaser.Scene {
     e.sprite.destroy();
     e.glow.destroy();
     this.run.kills += 1;
-    const killsSinceSkill = this.run.kills - (this.run.lastSkillDropKills ?? 0);
-    const killAccel = e.elite ? GAME_CONFIG.skillDropKillAccelMs * 3 : GAME_CONFIG.skillDropKillAccelMs;
-    this.run.nextSkillMs = Math.max(1600, this.run.nextSkillMs - killAccel);
-    if (killsSinceSkill >= GAME_CONFIG.skillDropPityKills) this.run.nextSkillMs = Math.min(this.run.nextSkillMs, 1600);
+    this.awardSkillXp(e.elite ? V13_BALANCE.rewards.eliteSxp : V13_BALANCE.rewards.killSxp, e.elite ? "elite_kill" : "kill");
     this.run.score += spec.score + (e.scoreBonus ?? 0);
     this.playImpact(e.x, e.y, color, e.kind === "bloomer" ? 0.88 : 0.72);
     this.addBurst(e.x, e.y, color, e.kind === "bloomer" ? 94 : 68, 0.25);
@@ -2182,8 +2273,10 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.activeBossId = null;
     this.run.clearedBosses.push(spec.id);
     this.run.score += spec.final ? 1600 : 760;
-    this.run.coreHp = Math.min(GAME_CONFIG.initialCoreHp, this.run.coreHp + 1);
+    this.run.segments = Math.min(V13_BALANCE.maxSegments, this.run.segments + 2);
+    this.run.coreHp = this.run.segments;
     this.run.bodyCracks = 0;
+    this.awardSkillXp(V13_BALANCE.rewards.bossPhaseSxp, "boss");
     this.addMemory(spec.rewardText, spec.final ? "victory" : "boss");
     this.addBurst(x, y, spec.final ? COLORS.gold : spec.color, spec.final ? 320 : 240, 0.44);
     this.addRing(x, y, spec.final ? 360 : 280, spec.color, 0.44);
@@ -2191,7 +2284,14 @@ class SerpentLifeScene extends Phaser.Scene {
     for (let i = 0; i < (spec.final ? 8 : 5); i += 1) this.spawnPickup("food", x + Phaser.Math.Between(-140, 140), y + Phaser.Math.Between(-140, 140));
     if (spec.final) {
       this.run.bossDefeated = true;
+      if (this.run.levelId === "level3") {
+        localStorage.setItem("serpentLifeTutorialDone", "1");
+      }
       this.endRun("victory");
+      return;
+    }
+    if (this.run.v13) {
+      this.advanceV13Level();
       return;
     }
     this.run.nextEliteMs = 26000;
@@ -2202,6 +2302,27 @@ class SerpentLifeScene extends Phaser.Scene {
       if (this.mode === "playing") this.queueUpgrade("boss");
       this.bossRewardTimer = null;
     });
+  }
+
+  advanceV13Level() {
+    const currentIndex = this.run.levelIndex ?? 1;
+    if (this.run.levelId === "tutorial") localStorage.setItem("serpentLifeTutorialDone", "1");
+    const next = V13_LEVELS[Math.min(V13_LEVELS.length - 1, currentIndex + 1)];
+    if (!next || next.id === this.run.levelId) return;
+    this.run.levelId = next.id;
+    this.run.levelIndex = this.v13LevelIndex(next.id);
+    this.run.levelElapsedMs = 0;
+    this.run.firstSkillCoreGiven = false;
+    this.run.bossSpawned = false;
+    this.run.activeBossId = null;
+    this.run.nextEnemyMs = next.enemyGraceMs;
+    this.run.nextEliteMs = 42000;
+    this.run.nextEventMs = 14000;
+    this.run.invulnMs = Math.max(this.run.invulnMs, 2600);
+    this.addMemory(`进入「${next.name}」：敌群会更密，身体和技能都要更谨慎。`, "chapter");
+    this.floatText(this.player.x, this.player.y - 112, next.name, COLORS.gold);
+    this.applyArenaTexture(this.chapterForTime());
+    for (let i = 0; i < 8; i += 1) this.spawnPickup("food", this.player.x + Phaser.Math.Between(-220, 220), this.player.y + Phaser.Math.Between(-180, 180));
   }
 
   hitBossWeakpoint(x, y) {
@@ -2224,15 +2345,29 @@ class SerpentLifeScene extends Phaser.Scene {
 
   damagePlayer(cause = "swarmed") {
     if (this.mode !== "playing" || this.run.invulnMs > 0) return;
-    this.run.invulnMs = GAME_CONFIG.invulnMs;
+    this.run.invulnMs = V13_BALANCE.headInvulnMs;
     this.player.hurtMs = 250;
     this.screenShake = Math.max(this.screenShake, 13);
     this.playHurtSound();
-    const protectedFromDeath = this.run.timeMs < GAME_CONFIG.lethalProtectionMs && this.run.coreHp <= 1;
-    if (!protectedFromDeath && this.run.timeMs >= 12000) this.run.coreHp -= 1;
-    this.addMemory("蛇首被击中，三颗心少了一次回声。", "hurt");
+    const level = this.currentV13Level();
+    const protectedFromDeath = (this.run.levelElapsedMs ?? this.run.timeMs) < level.protectionMs;
+    const rawLoss = cause === "boss" ? V13_BALANCE.headHitSegments.boss : cause === "elite" ? V13_BALANCE.headHitSegments.elite : V13_BALANCE.headHitSegments.enemy;
+    const loss = protectedFromDeath ? Math.min(1, rawLoss) : rawLoss;
+    this.run.segments = Math.max(0, this.run.segments - loss);
+    this.run.coreHp = this.run.segments;
+    this.addMemory(`蛇首被击中，身体脱落 ${loss} 节。`, "hurt");
     this.addBurst(this.player.x, this.player.y, COLORS.red, 120, 0.34);
-    if (this.run.coreHp <= 0) {
+    this.floatText(this.player.x, this.player.y - 42, `-${loss} 身体`, COLORS.rose);
+    if (this.run.segments <= V13_BALANCE.deathSegments && !this.run.emergencyMoltUsed) {
+      this.run.emergencyMoltUsed = true;
+      this.run.segments = V13_BALANCE.emergencyMoltSegments;
+      this.run.invulnMs = 2200;
+      this.run.bodyCracks = 0;
+      this.addMemory("濒死蜕皮触发，最后几节身体把蛇首拖回了战场。", "molt");
+      this.floatText(this.player.x, this.player.y - 76, "濒死蜕皮", COLORS.gold);
+      return;
+    }
+    if (this.run.segments <= V13_BALANCE.deathSegments) {
       this.run.deathCause = cause;
       this.endRun(cause);
     }
@@ -2408,17 +2543,19 @@ class SerpentLifeScene extends Phaser.Scene {
 
   updateHud() {
     if (!this.dom?.hearts) return;
-    const hp = Math.max(0, this.run.coreHp);
-    this.dom.hearts.textContent = `身 ${this.run.segments}/${GAME_CONFIG.maxSegments} · 命 ${hp}/${GAME_CONFIG.initialCoreHp}`;
-    const protect = this.run.timeMs < GAME_CONFIG.lethalProtectionMs ? " · 保" : "";
-    const cracks = this.run.bodyCracks > 0 ? ` · 裂${this.run.bodyCracks}/${GAME_CONFIG.bodyCrackLimit}` : "";
+    const skillNeed = v13SkillXpCost(this.run.upgradeCount, Math.max(0, this.run.levelIndex - 1));
+    this.dom.hearts.textContent = `身体 ${this.run.segments}/${V13_BALANCE.maxSegments} · 技 ${Math.floor(this.run.sxp)}/${skillNeed}`;
+    const level = this.currentV13Level();
+    const protect = (this.run.levelElapsedMs ?? this.run.timeMs) < level.protectionMs ? " · 保" : "";
+    const cracks = this.run.bodyCracks > 0 ? ` · 裂${this.run.bodyCracks}/${V13_BALANCE.crackLimit}` : "";
     const event = this.run.currentEvent ? ` · ${this.run.currentEvent.name}` : "";
     const elite = this.run.currentElite ? ` · ${this.run.currentElite.name}` : "";
     const chapter = this.chapterForTime();
     const stage = this.currentGrowthStage();
+    const growthNeed = v13GrowthCost(this.run.segments);
     const overload = this.run.memoryOverflow ? ` · 过载${this.run.memoryOverflow}` : "";
     if (this.dom.chapter) this.dom.chapter.textContent = `${chapter.name} · ${this.nextBossSpec()?.name ?? "终局完成"}`;
-    this.dom.meta.textContent = `${stage.name.slice(0, 1)} ${this.run.segments}/${GAME_CONFIG.maxSegments} ${Math.floor(this.run.timeMs / 1000)}s ${this.run.kills}杀${overload}${cracks}${event}${elite}${protect}`;
+    this.dom.meta.textContent = `${stage.name} · 长成 ${Math.floor(this.run.mxp)}/${growthNeed} · ${Math.floor(this.run.timeMs / 1000)}s · ${this.run.kills}杀${overload}${cracks}${event}${elite}${protect}`;
     const skillSignature = SKILLS.map((skill) => this.run.skills[skill.id]).join("|");
     if (this.lastSkillSignature !== skillSignature) {
       this.lastSkillSignature = skillSignature;
@@ -2466,7 +2603,7 @@ class SerpentLifeScene extends Phaser.Scene {
     if (this.dom?.lifeText) this.dom.lifeText.textContent = result;
     if (this.dom?.final) {
       const boss = this.boss ? ` · ${this.boss.name} ${Math.max(0, Math.round((this.boss.hp / this.boss.maxHp) * 100))}%` : this.run.bossDefeated ? " · 终局已破" : ` · Boss ${this.run.clearedBosses.length}/${BOSS_STAGES.length}`;
-      this.dom.final.textContent = `分数 ${this.run.score} · 击杀 ${this.run.kills} · 长度 ${this.run.segments}/${GAME_CONFIG.maxSegments} · ${this.chapterForTime().shortName}${boss}`;
+      this.dom.final.textContent = `分数 ${this.run.score} · 击杀 ${this.run.kills} · 身体 ${this.run.segments}/${V13_BALANCE.maxSegments} · ${this.chapterForTime().shortName}${boss}`;
     }
     if (this.dom?.endingKicker) this.dom.endingKicker.textContent = cause === "victory" ? "功成身退" : "死亡即故事";
     if (this.dom?.endingTitle) this.dom.endingTitle.textContent = cause === "victory" ? "它抵达了结尾" : "这条蛇的一生";
@@ -2683,8 +2820,8 @@ class SerpentLifeScene extends Phaser.Scene {
     const guarded = this.hasCombo("wall") || this.run.skills.shield >= 3;
     this.run.score += guarded ? 14 : 6;
     if (!guarded && this.run.bodyHitCooldownMs <= 0) {
-      this.run.bodyCracks = Math.min(GAME_CONFIG.bodyCrackLimit, this.run.bodyCracks + 1);
-      this.run.bodyHitCooldownMs = GAME_CONFIG.bodyHitCooldownMs;
+      this.run.bodyCracks = Math.min(V13_BALANCE.crackLimit, this.run.bodyCracks + 1);
+      this.run.bodyHitCooldownMs = V13_BALANCE.bodyHitCooldownMs;
     }
     this.addBodyCrackFx(point, guarded);
     this.playBodyBlockSound(guarded);
@@ -2867,7 +3004,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
   updateBgmAssetState() {
     if (!this.audioAssets?.bgm) return;
-    const lowHp = (this.run?.coreHp ?? GAME_CONFIG.initialCoreHp) <= 1;
+    const lowHp = (this.run?.segments ?? V13_BALANCE.initialSegments) <= V13_BALANCE.safeAfterSkillSegments + 1;
     const pressure = clamp((this.enemies?.length ?? 0) / 18 + (this.boss ? 0.5 : 0) + (lowHp ? 0.28 : 0) + (this.run?.memoryOverflow ?? 0) * 0.04, 0, 1.25);
     this.audioAssets.bgm.volume = 0.34 + pressure * 0.12;
     this.audioAssets.bgm.playbackRate = this.boss ? 1.045 : 1 + Math.min(0.035, pressure * 0.022);
@@ -2944,7 +3081,7 @@ class SerpentLifeScene extends Phaser.Scene {
 
   tickCombatMusic(melody) {
     if (!this.audioCtx || !this.musicNodes || this.mode !== "playing") return;
-    const lowHp = (this.run?.coreHp ?? GAME_CONFIG.initialCoreHp) <= 1;
+    const lowHp = (this.run?.segments ?? V13_BALANCE.initialSegments) <= V13_BALANCE.safeAfterSkillSegments + 1;
     const eventPressure = this.run?.currentEvent?.id === "hunt" ? 0.34 : this.run?.currentEvent ? 0.18 : 0;
     const crackPressure = (this.run?.bodyCracks ?? 0) * 0.12;
     const intensity = clamp((this.run?.wave ?? 1) / 5 + (this.boss ? 0.45 : 0) + eventPressure + crackPressure + (lowHp ? 0.35 : 0), 0.2, 1.55);

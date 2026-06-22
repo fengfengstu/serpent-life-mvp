@@ -93,6 +93,7 @@ async function runViewport(browser, viewport) {
         const source = scene.textures.get(key).source[0];
         return [key, source.width, source.height];
       }),
+      openingSafe: scene.enemies.length === 0 && scene.run.segments >= 12,
       firstEnemyTexture: scene.enemies[0]?.sprite?.texture?.key ?? null,
       canvas: (() => {
         const c = document.querySelector("canvas");
@@ -130,7 +131,10 @@ async function runViewport(browser, viewport) {
     scene.updateWaveEvent(1);
     const eventStarted = !!scene.run.currentEvent;
 
-    scene.run.segments = Math.max(10, scene.run.segments);
+    scene.spawnEnemy("drifter", { x: scene.player.x + 130, y: scene.player.y + 130 });
+    scene.run.segments = Math.max(12, scene.run.segments);
+    scene.run.skills.shield = 0;
+    scene.run.comboHighlights = [];
     scene.run.bodyCracks = 0;
     scene.run.bodyHitCooldownMs = 0;
     const bodyPoint = scene.getSegmentPoint(4);
@@ -188,10 +192,10 @@ async function runViewport(browser, viewport) {
     });
     scene.pickups = scene.pickups.filter((p) => p.type !== "skill");
     scene.run.pendingUpgrade = null;
-    scene.run.nextSkillMs = 0;
+    scene.run.sxp = 999;
     scene.run.lastSkillDropKills = scene.run.kills;
     scene.run.skillDropCount = 0;
-    scene.updateSpawns(16);
+    scene.tryProgressSkillCore("qa");
     const skillDropProbe = {
       skillPickups: scene.pickups.filter((p) => p.type === "skill").length,
       nextSkillMs: Math.round(scene.run.nextSkillMs),
@@ -215,7 +219,7 @@ async function runViewport(browser, viewport) {
     };
     scene.enemies = [];
     scene.projectiles = [];
-    scene.run.timeMs = 72000;
+    scene.run.timeMs = 106000;
     scene.tryOpenQueuedUpgrade();
     const pacingReleased = {
       mode: scene.mode,
@@ -256,6 +260,9 @@ async function runViewport(browser, viewport) {
       eliteEnemies: scene.enemies.filter((e) => e.elite).length,
     };
 
+    scene.run.levelId = "level3";
+    scene.run.levelIndex = 3;
+    scene.run.levelElapsedMs = 125000;
     scene.run.clearedBosses = ["memory_warden", "crimson_molt"];
     const finalSpec = scene.nextBossSpec();
     scene.spawnBoss(finalSpec);
@@ -417,10 +424,10 @@ const failures = [];
 for (const result of results) {
   if (result.logs.length) failures.push(`${result.viewport.name}: console errors`);
   if (result.first.mode !== "playing") failures.push(`${result.viewport.name}: first screen not playing`);
-  if (result.first.visibleEnemies < 1) failures.push(`${result.viewport.name}: no visible early enemy`);
+  if (!result.first.openingSafe || result.first.visibleEnemies !== 0) failures.push(`${result.viewport.name}: opening safety failed`);
   if (!result.first.textures.every(([, ok]) => ok)) failures.push(`${result.viewport.name}: missing generated texture`);
   if (result.first.textureCount > 100) failures.push(`${result.viewport.name}: too many textures preloaded (${result.first.textureCount})`);
-  if (!String(result.first.firstEnemyTexture).endsWith("-v11")) failures.push(`${result.viewport.name}: first enemy is not V11 art`);
+  if (result.first.firstEnemyTexture && !String(result.first.firstEnemyTexture).endsWith("-v11")) failures.push(`${result.viewport.name}: first enemy is not V11 art`);
   if (!result.first.textureSourceSizes.every(([key, w, h]) => key.startsWith("arena-v11") ? w >= 1024 && h >= 1024 : key.includes("pickup") ? w >= 320 && h >= 320 : w >= 512 || h >= 512)) {
     failures.push(`${result.viewport.name}: V11 source texture is too low resolution`);
   }
@@ -438,7 +445,7 @@ for (const result of results) {
   if (!result.gameplayProbe.growthProbe.overloadTypes.includes("overload")) failures.push(`${result.viewport.name}: overload choice missing`);
   if (result.gameplayProbe.fireProbe.fxAfter <= result.gameplayProbe.fireProbe.fxBefore) failures.push(`${result.viewport.name}: fire ring effect did not spawn`);
   if (result.gameplayProbe.surpriseProbe.after <= result.gameplayProbe.surpriseProbe.before) failures.push(`${result.viewport.name}: director surprise did not trigger`);
-  if (result.gameplayProbe.skillDropProbe.skillPickups !== 1 || result.gameplayProbe.skillDropProbe.dropCount < 1 || result.gameplayProbe.skillDropProbe.nextSkillMs < 14000 || result.gameplayProbe.skillDropProbe.nextSkillMs > 38000) {
+  if (result.gameplayProbe.skillDropProbe.skillPickups !== 1 || result.gameplayProbe.skillDropProbe.dropCount < 1 || result.gameplayProbe.skillDropProbe.nextSkillMs < 50000 || result.gameplayProbe.skillDropProbe.nextSkillMs > 65000) {
     failures.push(`${result.viewport.name}: skill drop pacing is outside target range`);
   }
   if (result.gameplayProbe.pacingProbe.held.mode !== "playing" || result.gameplayProbe.pacingProbe.held.pending !== "skill") failures.push(`${result.viewport.name}: upgrade pacing did not hold rapid second card`);
