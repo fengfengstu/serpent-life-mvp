@@ -1,6 +1,21 @@
 {
-  "latest": "v12-1-touch-joystick-fix",
+  "latest": "v12-2-balance-touch",
   "releases": [
+    {
+      "id": "v12-2-balance-touch",
+      "label": "v12.2 · 小摇杆与技能节奏修正版",
+      "sourceCommit": "e637208",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v12-2-balance-touch/",
+      "notes": [
+        "摇杆底盘从 58 缩到 42，手柄从 22 缩到 16，拖动视觉半径从 56 缩到 42",
+        "首颗技能核从约 22 秒提前到约 12 秒，让开局更早出现构筑目标",
+        "后续技能核改为时间、击杀加速和保底击杀共同驱动，避免纯等待导致技能太难获得",
+        "技能升级弹窗仍保留最小间隔与危险延迟，避免回到频繁打断移动的问题",
+        "移动端 smoke 新增技能掉落节奏断言和摇杆视觉半径断言",
+        "补充 iPhone 390×844 实体窗口真实触控截图验证"
+      ]
+    },
     {
       "id": "v12-1-touch-joystick-fix",
       "label": "v12.1 · 真实触控摇杆修正版",
