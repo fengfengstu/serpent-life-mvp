@@ -5,7 +5,7 @@
       "id": "v13-numeric-rebuild",
       "label": "v13 · 数值逻辑重构版",
       "sourceCommit": "c3f4f0e",
-      "deployCommit": "36b7400",
+      "deployCommit": "fdfd8c1",
       "path": "/serpent-life-mvp/versions/v13-numeric-rebuild/",
       "notes": [
         "身体重构为生命、资源和成长三位一体：受击掉身体，低身体触发濒死蜕皮，技能升级消耗身体",
