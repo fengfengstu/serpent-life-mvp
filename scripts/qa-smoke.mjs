@@ -179,6 +179,28 @@ async function runViewport(browser, viewport) {
       after: scene.run.recentSurprises.length,
       nextMs: scene.run.nextSurpriseMs,
     };
+    scene.mode = "playing";
+    scene.showDom("playing");
+    scene.run.pendingUpgrade = null;
+    scene.run.timeMs = 42000;
+    scene.run.lastUpgradeMs = 40000;
+    scene.queueUpgrade("skill");
+    const pacingHeld = {
+      mode: scene.mode,
+      pending: scene.run.pendingUpgrade?.reason ?? null,
+      upgrades: scene.run.upgradeCount,
+    };
+    scene.enemies = [];
+    scene.projectiles = [];
+    scene.run.timeMs = 72000;
+    scene.tryOpenQueuedUpgrade();
+    const pacingReleased = {
+      mode: scene.mode,
+      pending: scene.run.pendingUpgrade?.reason ?? null,
+      upgrades: scene.run.upgradeCount,
+    };
+    scene.mode = "playing";
+    scene.showDom("playing");
 
     scene.spawnBoss();
     const firstBossId = scene.boss?.id;
@@ -232,6 +254,7 @@ async function runViewport(browser, viewport) {
       growthProbe,
       fireProbe,
       surpriseProbe,
+      pacingProbe: { held: pacingHeld, released: pacingReleased },
       bossProbe,
       firstBossId,
       afterFirstBoss,
@@ -252,7 +275,8 @@ async function runViewport(browser, viewport) {
     };
   });
 
-  await page.mouse.move(viewport.width * 0.38, viewport.height * 0.72);
+  const joyDown = { x: Math.round(viewport.width * 0.38), y: Math.round(viewport.height * 0.72) };
+  await page.mouse.move(joyDown.x, joyDown.y);
   await page.mouse.down();
   await page.mouse.move(viewport.width * 0.8, viewport.height * 0.76, { steps: 8 });
   const joystick = await page.evaluate(() => {
@@ -265,17 +289,31 @@ async function runViewport(browser, viewport) {
     };
   });
   await page.mouse.up();
+  await page.waitForTimeout(80);
+  const joystickReleased = await page.evaluate(() => {
+    const scene = window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene;
+    return {
+      pointerState: scene.pointerState,
+      joyBaseVisible: scene.hud?.joyBase?.visible ?? false,
+      joyKnobVisible: scene.hud?.joyKnob?.visible ?? false,
+    };
+  });
 
   await page.waitForTimeout(2600);
+  const earlyUpgradeCardCount = await page.locator(".ui-upgrade:not(.ui-hidden) .ui-card").count();
   let upgrade = { reached: false };
-  if ((await page.locator(".ui-card").count()) > 0) {
+  if (!earlyUpgradeCardCount) {
+    await page.evaluate(() => window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene.openUpgrade("skill"));
+    await page.waitForTimeout(300);
+  }
+  if ((await page.locator(".ui-upgrade:not(.ui-hidden) .ui-card").count()) > 0) {
     await page.screenshot({ path: `qa-smoke-${viewport.name}-upgrade.png`, fullPage: false });
     await page.waitForTimeout(800);
-    await page.locator(".ui-card").first().tap();
+    await page.locator(".ui-upgrade:not(.ui-hidden) .ui-card").first().tap();
     await page.waitForTimeout(700);
-    if ((await page.evaluate(() => window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene.mode)) === "upgrade" && (await page.locator(".ui-card").count()) > 0) {
+    if ((await page.evaluate(() => window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene.mode)) === "upgrade" && (await page.locator(".ui-upgrade:not(.ui-hidden) .ui-card").count()) > 0) {
       await page.waitForTimeout(800);
-      await page.locator(".ui-card").first().tap();
+      await page.locator(".ui-upgrade:not(.ui-hidden) .ui-card").first().tap();
       await page.waitForTimeout(500);
     }
     upgrade = await page.evaluate(() => {
@@ -312,6 +350,9 @@ async function runViewport(browser, viewport) {
     skillVisuals,
     gameplayProbe,
     joystick,
+    joystickReleased,
+    joyDown,
+    earlyUpgradeCardCount,
     upgrade,
     endingOverflow: endingOverflow.length,
     overflow: overflow.length,
@@ -352,6 +393,8 @@ for (const result of results) {
   if (!result.gameplayProbe.growthProbe.overloadTypes.includes("overload")) failures.push(`${result.viewport.name}: overload choice missing`);
   if (result.gameplayProbe.fireProbe.fxAfter <= result.gameplayProbe.fireProbe.fxBefore) failures.push(`${result.viewport.name}: fire ring effect did not spawn`);
   if (result.gameplayProbe.surpriseProbe.after <= result.gameplayProbe.surpriseProbe.before) failures.push(`${result.viewport.name}: director surprise did not trigger`);
+  if (result.gameplayProbe.pacingProbe.held.mode !== "playing" || result.gameplayProbe.pacingProbe.held.pending !== "skill") failures.push(`${result.viewport.name}: upgrade pacing did not hold rapid second card`);
+  if (result.gameplayProbe.pacingProbe.released.mode !== "upgrade" || result.gameplayProbe.pacingProbe.released.pending) failures.push(`${result.viewport.name}: queued upgrade did not release after pacing window`);
   if (result.gameplayProbe.bossProbe.shieldAfterWeakHit >= 3 || !result.gameplayProbe.bossProbe.weakHitDamaged) failures.push(`${result.viewport.name}: boss weakpoint did not register`);
   if (!result.gameplayProbe.bossProbe.hudVisible || !result.gameplayProbe.bossProbe.worldBarExists) failures.push(`${result.viewport.name}: boss HP bar missing`);
   if (!result.gameplayProbe.firstBossId || result.gameplayProbe.afterFirstBoss.mode !== "playing" || result.gameplayProbe.afterFirstBoss.cleared.length < 1 || !result.gameplayProbe.afterFirstBoss.nextBoss) failures.push(`${result.viewport.name}: first boss did not advance chapter flow`);
@@ -362,6 +405,13 @@ for (const result of results) {
   }
   if (!result.gameplayProbe.retryClean.hasMusic) failures.push(`${result.viewport.name}: music did not restart after retry`);
   if (!result.joystick.pointerState || !result.joystick.joyBase) failures.push(`${result.viewport.name}: joystick did not activate`);
+  if (result.joystick.joyBase && (Math.abs(result.joystick.joyBase.x - result.joyDown.x) > 3 || Math.abs(result.joystick.joyBase.y - result.joyDown.y) > 3)) {
+    failures.push(`${result.viewport.name}: joystick base drifted away from touch point`);
+  }
+  if (result.joystickReleased.pointerState || result.joystickReleased.joyBaseVisible || result.joystickReleased.joyKnobVisible) {
+    failures.push(`${result.viewport.name}: joystick did not disappear after release`);
+  }
+  if (result.earlyUpgradeCardCount) failures.push(`${result.viewport.name}: upgrade cards appeared too early`);
   if (!result.upgrade.reached || result.upgrade.modeAfterPick !== "playing") failures.push(`${result.viewport.name}: upgrade flow did not return to playing`);
   if (result.endingOverflow || result.overflow) failures.push(`${result.viewport.name}: UI overflow`);
   if (!result.retry.playerVisible) failures.push(`${result.viewport.name}: retry camera lost player`);

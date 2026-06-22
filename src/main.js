@@ -394,6 +394,16 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   pointerPos(pointer) {
+    const event = pointer.event;
+    const rect = this.game?.canvas?.getBoundingClientRect();
+    if (event && rect?.width && rect?.height && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      const view = this.viewSize();
+      return {
+        id: pointer.id,
+        x: ((event.clientX - rect.left) / rect.width) * view.width,
+        y: ((event.clientY - rect.top) / rect.height) * view.height,
+      };
+    }
     const scale = this.displayScale();
     return { id: pointer.id, x: pointer.x / scale, y: pointer.y / scale };
   }
@@ -535,7 +545,7 @@ class SerpentLifeScene extends Phaser.Scene {
       bossSpawned: false,
       bossDefeated: false,
       nextFoodMs: 0,
-      nextSkillMs: 5500,
+      nextSkillMs: GAME_CONFIG.skillFirstDropMs,
       nextEnemyMs: 0,
       nextFireMs: 0,
       nextTurretMs: 0,
@@ -554,6 +564,9 @@ class SerpentLifeScene extends Phaser.Scene {
       relics: [],
       recentSurprises: [],
       pendingRareCore: 0,
+      pendingUpgrade: null,
+      lastUpgradeMs: -GAME_CONFIG.minUpgradeGapMs,
+      upgradeCount: 0,
       comboHighlights: [],
       buildSequence: [],
       memoryTokens: [],
@@ -611,7 +624,6 @@ class SerpentLifeScene extends Phaser.Scene {
     this.fxLayer.setDepth(20);
     this.snakeLayer.setDepth(30);
 
-    this.spawnPickup("skill", this.player.x + 380, this.player.y);
     [80, 148, 248].forEach((offset) => this.spawnPickup("food", this.player.x + offset, this.player.y + Phaser.Math.Between(-22, 22)));
     for (let i = 0; i < 8; i += 1) this.spawnPickup("food");
     this.spawnEnemy("drifter", { x: this.player.x + 155, y: this.player.y - 76 });
@@ -711,6 +723,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.updateWaveEvent(ms);
     this.updateRunSurprises(ms);
     this.updateMusicState();
+    this.tryOpenQueuedUpgrade();
     this.skillAuraRenderMs += ms;
     if (this.skillAuraRenderMs >= SKILL_AURA_INTERVAL_MS) {
       this.skillAuraRenderMs = 0;
@@ -766,15 +779,6 @@ class SerpentLifeScene extends Phaser.Scene {
     let dy = pos.y - p.sy;
     let len = Math.hypot(dx, dy);
     if (len <= GAME_CONFIG.inputDeadZone) return;
-    if (len > GAME_CONFIG.joystickFollowRadius) {
-      const follow = len - GAME_CONFIG.joystickFollowRadius;
-      p.sx += (dx / len) * follow;
-      p.sy += (dy / len) * follow;
-      dx = pos.x - p.sx;
-      dy = pos.y - p.sy;
-      len = Math.hypot(dx, dy);
-      this.hud?.joyBase?.setPosition(p.sx, p.sy);
-    }
     this.player.targetAngle = Math.atan2(dy, dx);
     const cap = Math.min(GAME_CONFIG.joystickRadius, len);
     this.hud?.joyKnob?.setPosition(p.sx + (dx / len) * cap, p.sy + (dy / len) * cap);
@@ -849,8 +853,8 @@ class SerpentLifeScene extends Phaser.Scene {
       this.run.nextFoodMs = memoryRain ? Math.max(260, GAME_CONFIG.foodSpawnMs * 0.48) : Math.max(460, GAME_CONFIG.foodSpawnMs - chapter.index * 35);
       this.spawnPickup("food");
     }
-    if (this.run.nextSkillMs <= 0 && this.pickups.filter((p) => p.type === "skill").length < 2) {
-      this.run.nextSkillMs = Math.max(10500, GAME_CONFIG.skillDropMs - chapter.index * 1050);
+    if (this.run.nextSkillMs <= 0 && !this.run.pendingUpgrade && this.pickups.filter((p) => p.type === "skill").length < 1) {
+      this.run.nextSkillMs = Math.max(28000, GAME_CONFIG.skillDropMs - chapter.index * 2200) + Math.random() * 10000;
       this.spawnPickup("skill");
     }
     const chapterPressure = chapter.index * 4;
@@ -902,7 +906,7 @@ class SerpentLifeScene extends Phaser.Scene {
     } else if (event.id === "hunt") {
       for (let i = 0; i < 5; i += 1) this.spawnEnemy(i % 2 ? "hunter" : "drifter");
     } else {
-      this.spawnPickup("skill");
+      this.trySpawnSkillPickup("resonance");
       this.run.nextLightningMs = 0;
       this.addRing(this.player.x, this.player.y, 240, COLORS.cyan, 0.22);
     }
@@ -922,7 +926,7 @@ class SerpentLifeScene extends Phaser.Scene {
       const kind = event.id === "crimson_surge" ? (i % 2 ? "bloomer" : "hunter") : event.id === "idol_edict" ? "sentinel" : (i % 2 ? "hunter" : "drifter");
       this.spawnEnemy(kind, null, { elite: true, auraTint: event.color, hpMultiplier: event.id === "idol_edict" ? 2.1 : 1.65, scoreBonus: 60 });
     }
-    if (event.id === "idol_edict") this.spawnPickup("skill");
+    if (event.id === "idol_edict") this.trySpawnSkillPickup("elite");
     this.screenShake = Math.max(this.screenShake, 8);
     this.playEventSound(event.id);
     window.setTimeout(() => {
@@ -959,6 +963,14 @@ class SerpentLifeScene extends Phaser.Scene {
     this.tweens.add({ targets: sprite, angle: 360, duration: type === "skill" ? 4200 : 5600, repeat: -1 });
     this.pickupLayer.add([aura, sprite]);
     this.pickups.push({ type, x, y, radius: type === "skill" ? 24 : 18, sprite, aura });
+  }
+
+  trySpawnSkillPickup(source = "field") {
+    if (this.run?.pendingUpgrade) return false;
+    if (this.pickups.filter((p) => p.type === "skill").length >= 1) return false;
+    this.spawnPickup("skill");
+    this.run.nextSkillMs = Math.max(this.run.nextSkillMs, GAME_CONFIG.skillDropMs * (source === "field" ? 0.65 : 0.45));
+    return true;
   }
 
   updatePickups(dt) {
@@ -1004,7 +1016,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.floatText(p.x, p.y, this.run.segments >= GAME_CONFIG.maxSegments ? `过载 +${this.run.memoryOverflow}` : "+1 记忆", COLORS.reward);
     this.playEatSound();
     this.updateGrowthStage(p);
-    if (this.run.memoryOverflow > 0 && this.run.memoryOverflow % 3 === 0) this.openUpgrade("overload");
+    if (this.run.memoryOverflow > 0 && this.run.memoryOverflow % 6 === 0) this.queueUpgrade("overload");
   }
 
   collectSkillPickup(index) {
@@ -1012,7 +1024,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.destroyPickup(index);
     this.addMemory("它吞下了一枚改变命运的技能核。", "skill_drop");
     this.playSkillSound("lightning");
-    this.openUpgrade();
+    this.queueUpgrade("skill");
   }
 
   currentGrowthStage() {
@@ -1031,7 +1043,10 @@ class SerpentLifeScene extends Phaser.Scene {
     this.floatText(point.x, point.y - 46, `蜕变：${stage.name}`, COLORS.gold);
     this.addRing(point.x, point.y, 160, COLORS.gold, 0.36);
     this.playComboSound("growth");
-    if (stage.id !== "overload") this.openUpgrade("growth");
+    if (stage.id !== "overload") {
+      this.run.nextSkillMs = Math.min(this.run.nextSkillMs, 9000);
+      this.floatText(point.x, point.y - 82, "新的技能核正在靠近", COLORS.cyan);
+    }
   }
 
   destroyPickup(index) {
@@ -1042,8 +1057,42 @@ class SerpentLifeScene extends Phaser.Scene {
     p.aura.destroy();
   }
 
+  queueUpgrade(reason = "skill", options = {}) {
+    if (!this.run || this.mode !== "playing") return;
+    const priority = { boss: 4, overload: 3, skill: 2, growth: 1 };
+    if (!this.run.pendingUpgrade || (priority[reason] ?? 0) >= (priority[this.run.pendingUpgrade.reason] ?? 0)) {
+      this.run.pendingUpgrade = { reason, createdMs: this.run.timeMs };
+    }
+    if (!options.defer && this.canOpenUpgradeNow() && !this.isPlayerInImmediateDanger()) {
+      this.openUpgrade(this.run.pendingUpgrade.reason);
+    } else if (!options.defer) {
+      this.floatText(this.player.x, this.player.y - 68, "突变已储存", COLORS.cyan);
+    }
+  }
+
+  canOpenUpgradeNow() {
+    return this.mode === "playing" && this.run.timeMs - this.run.lastUpgradeMs >= GAME_CONFIG.minUpgradeGapMs;
+  }
+
+  isPlayerInImmediateDanger() {
+    const enemyDanger = this.enemies.some((e) => Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y) < 180 + e.radius);
+    const projectileDanger = this.projectiles.some((p) => Phaser.Math.Distance.Between(this.player.x, this.player.y, p.x, p.y) < 132 + p.radius);
+    return enemyDanger || projectileDanger;
+  }
+
+  tryOpenQueuedUpgrade() {
+    if (!this.run?.pendingUpgrade || !this.canOpenUpgradeNow()) return;
+    const heldMs = this.run.timeMs - this.run.pendingUpgrade.createdMs;
+    if (this.isPlayerInImmediateDanger() && heldMs < GAME_CONFIG.queuedUpgradeDangerHoldMs) return;
+    this.openUpgrade(this.run.pendingUpgrade.reason);
+  }
+
   openUpgrade(reason = "skill") {
+    if (this.mode !== "playing") return;
     this.mode = "upgrade";
+    this.run.pendingUpgrade = null;
+    this.run.lastUpgradeMs = this.run.timeMs;
+    this.run.upgradeCount += 1;
     this.showDom("upgrade");
     this.stopCombatMusic(false);
     this.playUpgradeSound();
@@ -1177,7 +1226,7 @@ class SerpentLifeScene extends Phaser.Scene {
     if (relic.id === "broken_tail") {
       this.run.segments = Math.max(GAME_CONFIG.initialSegments, this.run.segments - 3);
       this.run.coreHp = Math.min(GAME_CONFIG.initialCoreHp, this.run.coreHp + 1);
-      this.spawnPickup("skill", this.player.x + 120, this.player.y - 60);
+      this.trySpawnSkillPickup("relic");
     }
     if (relic.id === "magnetic_scales") {
       this.run.greedPressure += 1;
@@ -1193,8 +1242,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.floatText(this.player.x, this.player.y - 72, event.name, event.rarity === "rare" ? COLORS.dangerCore : COLORS.cyan);
     if (event.id === "double_core") {
       this.run.bodyCracks = Math.min(GAME_CONFIG.bodyCrackLimit, this.run.bodyCracks + 1);
-      this.spawnPickup("skill", this.player.x + 120, this.player.y - 80);
-      this.spawnPickup("skill", this.player.x + 170, this.player.y + 80);
+      this.run.nextSkillMs = Math.min(this.run.nextSkillMs, 6000);
+      this.queueUpgrade("skill", { defer: true });
     } else if (event.id === "greed_gate") {
       for (let i = 0; i < 10; i += 1) this.spawnPickup("food");
       this.run.currentEvent = { id: "hunt", name: "围猎潮", color: COLORS.rose };
@@ -1473,7 +1522,10 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.score += spec.score + (e.scoreBonus ?? 0);
     this.playImpact(e.x, e.y, color, e.kind === "bloomer" ? 0.88 : 0.72);
     this.addBurst(e.x, e.y, color, e.kind === "bloomer" ? 94 : 68, 0.25);
-    if (Math.random() < (e.elite ? 0.75 : 0.11)) this.spawnPickup(e.elite && Math.random() < 0.28 ? "skill" : "food");
+    if (Math.random() < (e.elite ? 0.72 : 0.11)) {
+      if (e.elite && Math.random() < 0.12) this.trySpawnSkillPickup("elite_kill");
+      else this.spawnPickup("food", e.x, e.y);
+    }
     if (e.elite) this.addMemory(`精英「${spec.name}」倒下，留下一段发热的记忆。`, "elite");
     if (this.run.kills % 18 === 0) this.addMemory(`它在第${this.run.wave}波杀出一条窄路。`, "kill");
     this.playHitSound();
@@ -2094,7 +2146,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addBurst(x, y, spec.final ? COLORS.gold : spec.color, spec.final ? 320 : 240, 0.44);
     this.addRing(x, y, spec.final ? 360 : 280, spec.color, 0.44);
     this.screenShake = Math.max(this.screenShake, spec.final ? 18 : 12);
-    for (let i = 0; i < (spec.final ? 8 : 5); i += 1) this.spawnPickup(i === 0 ? "skill" : "food", x + Phaser.Math.Between(-140, 140), y + Phaser.Math.Between(-140, 140));
+    for (let i = 0; i < (spec.final ? 8 : 5); i += 1) this.spawnPickup("food", x + Phaser.Math.Between(-140, 140), y + Phaser.Math.Between(-140, 140));
     if (spec.final) {
       this.run.bossDefeated = true;
       this.endRun("victory");
@@ -2104,7 +2156,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.nextEventMs = 12000;
     this.floatText(x, y - 92, `${spec.name} 已击败`, COLORS.gold);
     window.setTimeout(() => {
-      if (this.mode === "playing") this.openUpgrade("boss");
+      if (this.mode === "playing") this.queueUpgrade("boss");
     }, 500);
   }
 
