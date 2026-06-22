@@ -276,19 +276,40 @@ async function runViewport(browser, viewport) {
   });
 
   const joyDown = { x: Math.round(viewport.width * 0.38), y: Math.round(viewport.height * 0.72) };
-  await page.mouse.move(joyDown.x, joyDown.y);
-  await page.mouse.down();
-  await page.mouse.move(viewport.width * 0.8, viewport.height * 0.76, { steps: 8 });
+  const joyMove = { x: Math.round(viewport.width * 0.8), y: Math.round(viewport.height * 0.76) };
+  const client = await page.context().newCDPSession(page);
+  await client.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x: joyDown.x, y: joyDown.y, radiusX: 8, radiusY: 8, id: 1 }],
+  });
+  for (let i = 1; i <= 8; i += 1) {
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{
+        x: Math.round(joyDown.x + ((joyMove.x - joyDown.x) * i) / 8),
+        y: Math.round(joyDown.y + ((joyMove.y - joyDown.y) * i) / 8),
+        radiusX: 8,
+        radiusY: 8,
+        id: 1,
+      }],
+    });
+  }
   const joystick = await page.evaluate(() => {
     const scene = window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene;
+    const canvas = document.querySelector("canvas");
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvas.width / rect.width;
+    const toScreen = (obj) => obj ? { x: Math.round(obj.x / scale), y: Math.round(obj.y / scale) } : null;
     return {
       pointerState: scene.pointerState,
       joyBase: scene.hud?.joyBase ? { x: Math.round(scene.hud.joyBase.x), y: Math.round(scene.hud.joyBase.y) } : null,
       joyKnob: scene.hud?.joyKnob ? { x: Math.round(scene.hud.joyKnob.x), y: Math.round(scene.hud.joyKnob.y) } : null,
+      joyBaseScreen: toScreen(scene.hud?.joyBase),
+      joyKnobScreen: toScreen(scene.hud?.joyKnob),
       targetAngle: Number(scene.player.targetAngle.toFixed(2)),
     };
   });
-  await page.mouse.up();
+  await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await page.waitForTimeout(80);
   const joystickReleased = await page.evaluate(() => {
     const scene = window.__SERPENT_LIFE__.scene.keys.SerpentLifeScene;
@@ -405,8 +426,8 @@ for (const result of results) {
   }
   if (!result.gameplayProbe.retryClean.hasMusic) failures.push(`${result.viewport.name}: music did not restart after retry`);
   if (!result.joystick.pointerState || !result.joystick.joyBase) failures.push(`${result.viewport.name}: joystick did not activate`);
-  if (result.joystick.joyBase && (Math.abs(result.joystick.joyBase.x - result.joyDown.x) > 3 || Math.abs(result.joystick.joyBase.y - result.joyDown.y) > 3)) {
-    failures.push(`${result.viewport.name}: joystick base drifted away from touch point`);
+  if (result.joystick.joyBaseScreen && (Math.abs(result.joystick.joyBaseScreen.x - result.joyDown.x) > 3 || Math.abs(result.joystick.joyBaseScreen.y - result.joyDown.y) > 3)) {
+    failures.push(`${result.viewport.name}: joystick base visual position drifted away from touch point`);
   }
   if (result.joystickReleased.pointerState || result.joystickReleased.joyBaseVisible || result.joystickReleased.joyKnobVisible) {
     failures.push(`${result.viewport.name}: joystick did not disappear after release`);

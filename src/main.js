@@ -383,8 +383,7 @@ class SerpentLifeScene extends Phaser.Scene {
   }
 
   viewSize() {
-    const scale = this.displayScale();
-    return { width: this.scale.width / scale, height: this.scale.height / scale };
+    return { width: this.scale.width, height: this.scale.height };
   }
 
   displayScale() {
@@ -396,16 +395,27 @@ class SerpentLifeScene extends Phaser.Scene {
   pointerPos(pointer) {
     const event = pointer.event;
     const rect = this.game?.canvas?.getBoundingClientRect();
-    if (event && rect?.width && rect?.height && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+    const touch = event?.changedTouches?.[0] ?? event?.touches?.[0] ?? event;
+    if (touch && rect?.width && rect?.height && Number.isFinite(touch.clientX) && Number.isFinite(touch.clientY)) {
       const view = this.viewSize();
       return {
         id: pointer.id,
-        x: ((event.clientX - rect.left) / rect.width) * view.width,
-        y: ((event.clientY - rect.top) / rect.height) * view.height,
+        x: ((touch.clientX - rect.left) / rect.width) * view.width,
+        y: ((touch.clientY - rect.top) / rect.height) * view.height,
       };
     }
     const scale = this.displayScale();
-    return { id: pointer.id, x: pointer.x / scale, y: pointer.y / scale };
+    return { id: pointer.id, x: pointer.x, y: pointer.y };
+  }
+
+  screenPointFromGame(x, y) {
+    const scale = this.displayScale();
+    return { x: x / scale, y: y / scale };
+  }
+
+  gamePointFromScreen(x, y) {
+    const scale = this.displayScale();
+    return { x: x * scale, y: y * scale };
   }
 
   cameraViewSize() {
@@ -668,9 +678,12 @@ class SerpentLifeScene extends Phaser.Scene {
 
   buildHud() {
     const { height } = this.viewSize();
+    const scale = this.displayScale();
     this.hud = {};
     this.hud.joyBase = this.add.circle(86, height - 104, 58, 0x081315, 0.62).setStrokeStyle(3, COLORS.jade, 0.35).setScrollFactor(0);
     this.hud.joyKnob = this.add.circle(86, height - 104, 22, COLORS.jade, 0.82).setStrokeStyle(3, COLORS.gold, 0.75).setScrollFactor(0);
+    this.hud.joyBase.setScale(scale);
+    this.hud.joyKnob.setScale(scale);
     this.hud.joyBase.setVisible(false);
     this.hud.joyKnob.setVisible(false);
     this.uiLayer.add([this.hud.joyBase, this.hud.joyKnob]);
@@ -683,6 +696,9 @@ class SerpentLifeScene extends Phaser.Scene {
     }
     if (!this.hud) return;
     const { height } = this.viewSize();
+    const scale = this.displayScale();
+    this.hud.joyBase.setScale(scale);
+    this.hud.joyKnob.setScale(scale);
     if (!this.pointerState) {
       this.hud.joyBase.setPosition(86, height - 104);
       this.hud.joyKnob.setPosition(86, height - 104);
