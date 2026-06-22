@@ -1,6 +1,22 @@
 {
-  "latest": "v12-2-balance-touch",
+  "latest": "v13-numeric-rebuild",
   "releases": [
+    {
+      "id": "v13-numeric-rebuild",
+      "label": "v13 · 数值逻辑重构版",
+      "sourceCommit": "c3f4f0e",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v13-numeric-rebuild/",
+      "notes": [
+        "身体重构为生命、资源和成长三位一体：受击掉身体，低身体触发濒死蜕皮，技能升级消耗身体",
+        "吃记忆不再立刻长一节，而是进入成长经验；达到成本后才增长，避免长度数字失去意义",
+        "技能卡只通过技能珠触发，技能珠来自 SXP 进度、击杀、精英、Boss 和事件，不再按旧定时器频繁打断",
+        "新增教学关、第一关、第二关、第三关入口；Boss 击败后推进关卡，第三关 Boss 死亡才结算胜利",
+        "开局安全期不再贴脸刷怪，HUD 显示身体、成长进度、技能进度、裂痕和 Boss 血条",
+        "新增 V13 数值模拟器，1000 局曲线校验 30/60/180/300/480 秒身体长度与技能次数",
+        "本地开发预览与独立版本目录均通过 390×844 和 320×568 移动端 smoke"
+      ]
+    },
     {
       "id": "v12-2-balance-touch",
       "label": "v12.2 · 小摇杆与技能节奏修正版",
