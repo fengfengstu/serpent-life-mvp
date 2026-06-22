@@ -5,7 +5,7 @@
       "id": "v12-2-balance-touch",
       "label": "v12.2 · 小摇杆与技能节奏修正版",
       "sourceCommit": "e637208",
-      "deployCommit": "pending",
+      "deployCommit": "19bf696",
       "path": "/serpent-life-mvp/versions/v12-2-balance-touch/",
       "notes": [
         "摇杆底盘从 58 缩到 42，手柄从 22 缩到 16，拖动视觉半径从 56 缩到 42",
