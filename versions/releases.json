@@ -1,6 +1,21 @@
 {
-  "latest": "v11-iphone-smooth-60fps",
+  "latest": "v12-pacing-joystick",
   "releases": [
+    {
+      "id": "v12-pacing-joystick",
+      "label": "v12 · 升级节奏与摇杆修正版",
+      "sourceCommit": "78dff27",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v12-pacing-joystick/",
+      "notes": [
+        "技能核从开局即给改为延后出现，常规掉落间隔显著拉长，减少频繁选卡打断",
+        "新增突变暂存机制：短时间内连续获得技能核时先储存，满足最小游玩窗口后再弹卡",
+        "成长阶段只给反馈和技能核靠近提示，不再因为每次变长强制暂停",
+        "Boss、精英、随机事件奖励统一接入节奏阀门，避免多来源叠加造成连续选卡",
+        "修正高清/高 DPR 下触控坐标偏移，摇杆底座现在出现在手指按下处，松手后消失",
+        "移动端 smoke 新增早期卡片、摇杆跟手/释放、连续升级节奏回归断言"
+      ]
+    },
     {
       "id": "v11-iphone-smooth-60fps",
       "label": "v11 · iPhone 60fps 顺滑版",
