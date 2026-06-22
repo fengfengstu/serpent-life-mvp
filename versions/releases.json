@@ -1,6 +1,20 @@
 {
-  "latest": "v13-1-tutorial-guidance",
+  "latest": "v13-2-death-skill-clarity",
   "releases": [
+    {
+      "id": "v13-2-death-skill-clarity",
+      "label": "v13.2 · 死亡反馈与技能珠确定性修正版",
+      "sourceCommit": "11e130a",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v13-2-death-skill-clarity/",
+      "notes": [
+        "技能珠改为吃到就立刻打开技能选择，不再走隐藏排队，避免玩家误以为技能珠失效",
+        "保留普通排队升级节奏给非技能珠来源，避免随机事件和 Boss 奖励连续打断移动",
+        "教学关身体跌到死亡线时触发教学保护，补回身体并显示提示，不再莫名进入死亡故事结算",
+        "小屏结算页减少记忆条目并限制故事正文行数，修复 320×568 下按钮越界",
+        "smoke 新增技能珠立即弹卡断言、教学保护断言和小屏结算越界检查"
+      ]
+    },
     {
       "id": "v13-1-tutorial-guidance",
       "label": "v13.1 · 教学引导与首颗技能珠修正版",
