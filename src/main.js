@@ -517,6 +517,8 @@ class SerpentLifeScene extends Phaser.Scene {
     this.skillLayer?.removeAll(true);
     this.skillLayer?.destroy();
     this.skillLayer = null;
+    this.bossRewardTimer?.remove(false);
+    this.bossRewardTimer = null;
     this.snakeLayer?.removeAll(true);
     this.fastSnakeRender = null;
     this.uiLayer?.removeAll(true);
@@ -2155,9 +2157,11 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.nextEliteMs = 26000;
     this.run.nextEventMs = 12000;
     this.floatText(x, y - 92, `${spec.name} 已击败`, COLORS.gold);
-    window.setTimeout(() => {
+    this.bossRewardTimer?.remove(false);
+    this.bossRewardTimer = this.time.delayedCall(500, () => {
       if (this.mode === "playing") this.queueUpgrade("boss");
-    }, 500);
+      this.bossRewardTimer = null;
+    });
   }
 
   hitBossWeakpoint(x, y) {
