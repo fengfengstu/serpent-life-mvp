@@ -4,7 +4,7 @@
     {
       "id": "v12-pacing-joystick",
       "label": "v12 · 升级节奏与摇杆修正版",
-      "sourceCommit": "78dff27",
+      "sourceCommit": "6034e84",
       "deployCommit": "pending",
       "path": "/serpent-life-mvp/versions/v12-pacing-joystick/",
       "notes": [
