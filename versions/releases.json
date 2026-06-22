@@ -1,6 +1,21 @@
 {
-  "latest": "v13-numeric-rebuild",
+  "latest": "v13-1-tutorial-guidance",
   "releases": [
+    {
+      "id": "v13-1-tutorial-guidance",
+      "label": "v13.1 · 教学引导与首颗技能珠修正版",
+      "sourceCommit": "3aac33c",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v13-1-tutorial-guidance/",
+      "notes": [
+        "教学关新增分阶段提示框和箭头：移动、吞噬记忆、技能进度、技能珠、选择突变、身体生命与 Boss 机制逐步引导",
+        "普通记忆新增技能进度浮字，玩家能看懂吃记忆同时推进身体成长和技能进度",
+        "教学关首颗技能珠提前到 12 秒且吃够 5 枚记忆即可触发，避免“吃了很多记忆但没长技能”的空反馈",
+        "第一关和后续关卡首颗技能珠门槛前移，但仍保留 60 秒卡片节奏阀，避免频繁选卡打断移动",
+        "修正教学箭头在高 DPR/iPhone 画布下使用内部像素坐标导致偏移和越界的问题",
+        "移动端 smoke 新增教学提示、技能珠生成、UI 越界详情断言，并通过 390×844 与 320×568 验证"
+      ]
+    },
     {
       "id": "v13-numeric-rebuild",
       "label": "v13 · 数值逻辑重构版",
