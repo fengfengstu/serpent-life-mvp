@@ -558,6 +558,8 @@ class SerpentLifeScene extends Phaser.Scene {
       bossDefeated: false,
       nextFoodMs: 0,
       nextSkillMs: GAME_CONFIG.skillFirstDropMs,
+      lastSkillDropKills: 0,
+      skillDropCount: 0,
       nextEnemyMs: 0,
       nextFireMs: 0,
       nextTurretMs: 0,
@@ -680,8 +682,8 @@ class SerpentLifeScene extends Phaser.Scene {
     const { height } = this.viewSize();
     const scale = this.displayScale();
     this.hud = {};
-    this.hud.joyBase = this.add.circle(86, height - 104, 58, 0x081315, 0.62).setStrokeStyle(3, COLORS.jade, 0.35).setScrollFactor(0);
-    this.hud.joyKnob = this.add.circle(86, height - 104, 22, COLORS.jade, 0.82).setStrokeStyle(3, COLORS.gold, 0.75).setScrollFactor(0);
+    this.hud.joyBase = this.add.circle(86, height - 104, 42, 0x081315, 0.58).setStrokeStyle(2, COLORS.jade, 0.34).setScrollFactor(0);
+    this.hud.joyKnob = this.add.circle(86, height - 104, 16, COLORS.jade, 0.78).setStrokeStyle(2, COLORS.gold, 0.72).setScrollFactor(0);
     this.hud.joyBase.setScale(scale);
     this.hud.joyKnob.setScale(scale);
     this.hud.joyBase.setVisible(false);
@@ -872,8 +874,8 @@ class SerpentLifeScene extends Phaser.Scene {
       this.spawnPickup("food");
     }
     if (this.run.nextSkillMs <= 0 && !this.run.pendingUpgrade && this.pickups.filter((p) => p.type === "skill").length < 1) {
-      this.run.nextSkillMs = Math.max(28000, GAME_CONFIG.skillDropMs - chapter.index * 2200) + Math.random() * 10000;
       this.spawnPickup("skill");
+      this.markSkillDrop("field");
     }
     const chapterPressure = chapter.index * 4;
     const enemyLimit = 11 + this.run.wave * 2 + chapterPressure + (hunt ? 6 : 0) + (this.run.currentElite ? 4 : 0);
@@ -983,11 +985,29 @@ class SerpentLifeScene extends Phaser.Scene {
     this.pickups.push({ type, x, y, radius: type === "skill" ? 24 : 18, sprite, aura });
   }
 
+  nextSkillDropDelay(source = "field") {
+    const chapter = this.chapterForTime();
+    const killsSince = Math.max(0, (this.run?.kills ?? 0) - (this.run?.lastSkillDropKills ?? 0));
+    const chapterBonus = chapter.index * 2600;
+    const killAccel = Math.min(GAME_CONFIG.skillDropKillAccelMaxMs, killsSince * GAME_CONFIG.skillDropKillAccelMs);
+    const repeatTax = Math.min(3600, (this.run?.skillDropCount ?? 0) * 850);
+    const sourceFactor = source === "field" ? 1 : source === "resonance" ? 0.46 : source.includes("elite") ? 0.55 : 0.68;
+    const base = GAME_CONFIG.skillDropMs - chapterBonus - killAccel + repeatTax;
+    return Math.max(GAME_CONFIG.skillDropMinMs, base * sourceFactor) + Math.random() * GAME_CONFIG.skillDropJitterMs;
+  }
+
+  markSkillDrop(source = "field") {
+    if (!this.run) return;
+    this.run.lastSkillDropKills = this.run.kills;
+    this.run.skillDropCount += 1;
+    this.run.nextSkillMs = this.nextSkillDropDelay(source);
+  }
+
   trySpawnSkillPickup(source = "field") {
     if (this.run?.pendingUpgrade) return false;
     if (this.pickups.filter((p) => p.type === "skill").length >= 1) return false;
     this.spawnPickup("skill");
-    this.run.nextSkillMs = Math.max(this.run.nextSkillMs, GAME_CONFIG.skillDropMs * (source === "field" ? 0.65 : 0.45));
+    this.markSkillDrop(source);
     return true;
   }
 
@@ -1537,6 +1557,10 @@ class SerpentLifeScene extends Phaser.Scene {
     e.sprite.destroy();
     e.glow.destroy();
     this.run.kills += 1;
+    const killsSinceSkill = this.run.kills - (this.run.lastSkillDropKills ?? 0);
+    const killAccel = e.elite ? GAME_CONFIG.skillDropKillAccelMs * 3 : GAME_CONFIG.skillDropKillAccelMs;
+    this.run.nextSkillMs = Math.max(1600, this.run.nextSkillMs - killAccel);
+    if (killsSinceSkill >= GAME_CONFIG.skillDropPityKills) this.run.nextSkillMs = Math.min(this.run.nextSkillMs, 1600);
     this.run.score += spec.score + (e.scoreBonus ?? 0);
     this.playImpact(e.x, e.y, color, e.kind === "bloomer" ? 0.88 : 0.72);
     this.addBurst(e.x, e.y, color, e.kind === "bloomer" ? 94 : 68, 0.25);

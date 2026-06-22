@@ -181,6 +181,29 @@ async function runViewport(browser, viewport) {
     };
     scene.mode = "playing";
     scene.showDom("playing");
+
+    scene.pickups.filter((p) => p.type === "skill").forEach((p) => {
+      p.sprite?.destroy();
+      p.aura?.destroy();
+    });
+    scene.pickups = scene.pickups.filter((p) => p.type !== "skill");
+    scene.run.pendingUpgrade = null;
+    scene.run.nextSkillMs = 0;
+    scene.run.lastSkillDropKills = scene.run.kills;
+    scene.run.skillDropCount = 0;
+    scene.updateSpawns(16);
+    const skillDropProbe = {
+      skillPickups: scene.pickups.filter((p) => p.type === "skill").length,
+      nextSkillMs: Math.round(scene.run.nextSkillMs),
+      dropCount: scene.run.skillDropCount,
+      lastDropKills: scene.run.lastSkillDropKills,
+    };
+    scene.pickups.filter((p) => p.type === "skill").forEach((p) => {
+      p.sprite?.destroy();
+      p.aura?.destroy();
+    });
+    scene.pickups = scene.pickups.filter((p) => p.type !== "skill");
+
     scene.run.pendingUpgrade = null;
     scene.run.timeMs = 42000;
     scene.run.lastUpgradeMs = 40000;
@@ -254,6 +277,7 @@ async function runViewport(browser, viewport) {
       growthProbe,
       fireProbe,
       surpriseProbe,
+      skillDropProbe,
       pacingProbe: { held: pacingHeld, released: pacingReleased },
       bossProbe,
       firstBossId,
@@ -414,6 +438,9 @@ for (const result of results) {
   if (!result.gameplayProbe.growthProbe.overloadTypes.includes("overload")) failures.push(`${result.viewport.name}: overload choice missing`);
   if (result.gameplayProbe.fireProbe.fxAfter <= result.gameplayProbe.fireProbe.fxBefore) failures.push(`${result.viewport.name}: fire ring effect did not spawn`);
   if (result.gameplayProbe.surpriseProbe.after <= result.gameplayProbe.surpriseProbe.before) failures.push(`${result.viewport.name}: director surprise did not trigger`);
+  if (result.gameplayProbe.skillDropProbe.skillPickups !== 1 || result.gameplayProbe.skillDropProbe.dropCount < 1 || result.gameplayProbe.skillDropProbe.nextSkillMs < 14000 || result.gameplayProbe.skillDropProbe.nextSkillMs > 38000) {
+    failures.push(`${result.viewport.name}: skill drop pacing is outside target range`);
+  }
   if (result.gameplayProbe.pacingProbe.held.mode !== "playing" || result.gameplayProbe.pacingProbe.held.pending !== "skill") failures.push(`${result.viewport.name}: upgrade pacing did not hold rapid second card`);
   if (result.gameplayProbe.pacingProbe.released.mode !== "upgrade" || result.gameplayProbe.pacingProbe.released.pending) failures.push(`${result.viewport.name}: queued upgrade did not release after pacing window`);
   if (result.gameplayProbe.bossProbe.shieldAfterWeakHit >= 3 || !result.gameplayProbe.bossProbe.weakHitDamaged) failures.push(`${result.viewport.name}: boss weakpoint did not register`);
@@ -428,6 +455,10 @@ for (const result of results) {
   if (!result.joystick.pointerState || !result.joystick.joyBase) failures.push(`${result.viewport.name}: joystick did not activate`);
   if (result.joystick.joyBaseScreen && (Math.abs(result.joystick.joyBaseScreen.x - result.joyDown.x) > 3 || Math.abs(result.joystick.joyBaseScreen.y - result.joyDown.y) > 3)) {
     failures.push(`${result.viewport.name}: joystick base visual position drifted away from touch point`);
+  }
+  if (result.joystick.joyBaseScreen && result.joystick.joyKnobScreen) {
+    const knobDrift = Math.hypot(result.joystick.joyKnobScreen.x - result.joystick.joyBaseScreen.x, result.joystick.joyKnobScreen.y - result.joystick.joyBaseScreen.y);
+    if (knobDrift > 23) failures.push(`${result.viewport.name}: joystick visual radius is too large`);
   }
   if (result.joystickReleased.pointerState || result.joystickReleased.joyBaseVisible || result.joystickReleased.joyKnobVisible) {
     failures.push(`${result.viewport.name}: joystick did not disappear after release`);
