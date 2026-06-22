@@ -1,6 +1,21 @@
 {
-  "latest": "v12-pacing-joystick",
+  "latest": "v12-1-touch-joystick-fix",
   "releases": [
+    {
+      "id": "v12-1-touch-joystick-fix",
+      "label": "v12.1 · 真实触控摇杆修正版",
+      "sourceCommit": "699a883",
+      "deployCommit": "pending",
+      "path": "/serpent-life-mvp/versions/v12-1-touch-joystick-fix/",
+      "notes": [
+        "修正 iPhone TouchEvent 坐标读取，真实触控不再走错误的高清倍率 fallback",
+        "修正 canvas UI 摇杆的视觉坐标：底座位置按内部 canvas 坐标绘制，屏幕上与手指按下点一致",
+        "摇杆尺寸按渲染倍率缩放，避免高清画布下视觉尺寸被压小",
+        "移动端 smoke 改用 touchStart/touchMove/touchEnd，而不是鼠标拖拽冒充触控",
+        "新增视觉屏幕坐标断言，检查 joyBaseScreen 与手指坐标一致",
+        "补充 iPhone 390×844 实体窗口按住截图验证，修复后屏幕坐标偏差为 0"
+      ]
+    },
     {
       "id": "v12-pacing-joystick",
       "label": "v12 · 升级节奏与摇杆修正版",
