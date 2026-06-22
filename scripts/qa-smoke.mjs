@@ -327,6 +327,7 @@ async function runViewport(browser, viewport) {
       segments: scene.run.segments,
       lastMemory: scene.run.memoryTokens.at(-1)?.type ?? null,
     };
+    scene.startRun();
     return {
       audioBefore,
       eventStarted,
