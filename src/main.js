@@ -1183,7 +1183,9 @@ class SerpentLifeScene extends Phaser.Scene {
     this.run.skillCoresCollected = (this.run.skillCoresCollected ?? 0) + 1;
     this.addMemory("它吞下了一枚改变命运的技能核。", "skill_drop");
     this.playSkillSound("lightning");
-    this.queueUpgrade("skill");
+    this.run.pendingUpgrade = null;
+    this.floatText(this.player.x, this.player.y - 72, "选择技能", COLORS.gold);
+    this.openUpgrade("skill");
   }
 
   currentGrowthStage() {
@@ -2396,6 +2398,16 @@ class SerpentLifeScene extends Phaser.Scene {
       this.floatText(this.player.x, this.player.y - 76, "濒死蜕皮", COLORS.gold);
       return;
     }
+    if (this.run.segments <= V13_BALANCE.deathSegments && this.run.levelId === "tutorial") {
+      this.run.segments = Math.max(8, V13_BALANCE.emergencyMoltSegments + 2);
+      this.run.coreHp = this.run.segments;
+      this.run.invulnMs = 3600;
+      this.run.bodyCracks = 0;
+      this.addMemory("教学保护触发：身体过短，洞穴把它送回战场。", "tutorial_guard");
+      this.floatText(this.player.x, this.player.y - 92, "教学保护：补回身体", COLORS.gold);
+      this.addRing(this.player.x, this.player.y, 190, COLORS.gold, 0.44);
+      return;
+    }
     if (this.run.segments <= V13_BALANCE.deathSegments) {
       this.run.deathCause = cause;
       this.endRun(cause);
@@ -2747,7 +2759,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addBurst(this.player.x, this.player.y, cause === "victory" ? COLORS.gold : COLORS.rose, 210, 0.38);
 
     const result = this.makeLifeText(cause);
-    const memoryLimit = this.scale.height < 640 ? 3 : 8;
+    const memoryLimit = this.scale.height < 640 ? 2 : 8;
     const memories = this.run.memoryTokens.slice(-memoryLimit);
     if (this.dom?.memoryList) {
       this.dom.memoryList.innerHTML = memories.map((m, index) => `<span style="--delay:${index * 0.12}s">${m.text}</span>`).join("");

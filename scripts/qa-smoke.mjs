@@ -208,6 +208,25 @@ async function runViewport(browser, viewport) {
     });
     scene.pickups = scene.pickups.filter((p) => p.type !== "skill");
 
+    scene.mode = "playing";
+    scene.showDom("playing");
+    scene.run.pendingUpgrade = null;
+    scene.run.timeMs = 50000;
+    scene.run.lastUpgradeMs = 49900;
+    const upgradesBeforePickup = scene.run.upgradeCount;
+    scene.spawnPickup("skill", scene.player.x + 12, scene.player.y + 12);
+    const pickupIndex = scene.pickups.findIndex((p) => p.type === "skill");
+    scene.collectSkillPickup(pickupIndex);
+    const immediateSkillPickupProbe = {
+      mode: scene.mode,
+      pending: scene.run.pendingUpgrade?.reason ?? null,
+      upgradesBefore: upgradesBeforePickup,
+      upgradesAfter: scene.run.upgradeCount,
+      cards: scene.dom.cards.querySelectorAll(".ui-card").length,
+    };
+    scene.mode = "playing";
+    scene.showDom("playing");
+
     scene.run.pendingUpgrade = null;
     scene.run.timeMs = 42000;
     scene.run.lastUpgradeMs = 40000;
@@ -298,6 +317,16 @@ async function runViewport(browser, viewport) {
       tipVisible: !scene.dom.tutorialTip.classList.contains("ui-hidden"),
       arrowVisible: !scene.dom.tutorialArrow.classList.contains("ui-hidden"),
     };
+    scene.run.emergencyMoltUsed = true;
+    scene.run.segments = 4;
+    scene.run.coreHp = 4;
+    scene.run.invulnMs = 0;
+    scene.damagePlayer("boss");
+    const tutorialDeathProtectionProbe = {
+      mode: scene.mode,
+      segments: scene.run.segments,
+      lastMemory: scene.run.memoryTokens.at(-1)?.type ?? null,
+    };
     return {
       audioBefore,
       eventStarted,
@@ -306,6 +335,7 @@ async function runViewport(browser, viewport) {
       fireProbe,
       surpriseProbe,
       skillDropProbe,
+      immediateSkillPickupProbe,
       pacingProbe: { held: pacingHeld, released: pacingReleased },
       bossProbe,
       firstBossId,
@@ -315,6 +345,7 @@ async function runViewport(browser, viewport) {
       tutorialProbe: {
         start: tutorialStartGuide,
         skill: tutorialSkillGuide,
+        deathProtection: tutorialDeathProtectionProbe,
       },
       retryClean: {
         boss: !!scene.boss,
@@ -473,6 +504,9 @@ for (const result of results) {
   if (result.gameplayProbe.skillDropProbe.skillPickups !== 1 || result.gameplayProbe.skillDropProbe.dropCount < 1 || result.gameplayProbe.skillDropProbe.nextSkillMs < 50000 || result.gameplayProbe.skillDropProbe.nextSkillMs > 65000) {
     failures.push(`${result.viewport.name}: skill drop pacing is outside target range`);
   }
+  if (result.gameplayProbe.immediateSkillPickupProbe.mode !== "upgrade" || result.gameplayProbe.immediateSkillPickupProbe.pending || result.gameplayProbe.immediateSkillPickupProbe.upgradesAfter <= result.gameplayProbe.immediateSkillPickupProbe.upgradesBefore || result.gameplayProbe.immediateSkillPickupProbe.cards < 1) {
+    failures.push(`${result.viewport.name}: skill pickup did not open upgrade immediately`);
+  }
   if (result.gameplayProbe.pacingProbe.held.mode !== "playing" || result.gameplayProbe.pacingProbe.held.pending !== "skill") failures.push(`${result.viewport.name}: upgrade pacing did not hold rapid second card`);
   if (result.gameplayProbe.pacingProbe.released.mode !== "upgrade" || result.gameplayProbe.pacingProbe.released.pending) failures.push(`${result.viewport.name}: queued upgrade did not release after pacing window`);
   if (result.gameplayProbe.bossProbe.shieldAfterWeakHit >= 3 || !result.gameplayProbe.bossProbe.weakHitDamaged) failures.push(`${result.viewport.name}: boss weakpoint did not register`);
@@ -482,6 +516,7 @@ for (const result of results) {
   if (result.gameplayProbe.finalBossProbe.mode !== "gameover" || !result.gameplayProbe.finalBossProbe.bossDefeated || result.gameplayProbe.finalBossProbe.cleared.length < 2) failures.push(`${result.viewport.name}: final boss did not end run`);
   if (!result.gameplayProbe.tutorialProbe.start.tipVisible || !result.gameplayProbe.tutorialProbe.start.arrowVisible || !result.gameplayProbe.tutorialProbe.start.title.includes("移动")) failures.push(`${result.viewport.name}: tutorial movement guide missing`);
   if (!result.gameplayProbe.tutorialProbe.skill.tipVisible || !result.gameplayProbe.tutorialProbe.skill.arrowVisible || result.gameplayProbe.tutorialProbe.skill.skillPickups < 1 || !result.gameplayProbe.tutorialProbe.skill.title.includes("技能珠")) failures.push(`${result.viewport.name}: tutorial skill core guide missing`);
+  if (result.gameplayProbe.tutorialProbe.deathProtection.mode === "gameover" || result.gameplayProbe.tutorialProbe.deathProtection.segments < 8 || result.gameplayProbe.tutorialProbe.deathProtection.lastMemory !== "tutorial_guard") failures.push(`${result.viewport.name}: tutorial death protection missing`);
   if (result.gameplayProbe.retryClean.boss || result.gameplayProbe.retryClean.projectiles || result.gameplayProbe.retryClean.shots || result.gameplayProbe.retryClean.frostFields || result.gameplayProbe.retryClean.bodyCracks || result.gameplayProbe.retryClean.currentEvent || result.gameplayProbe.retryClean.currentElite || result.gameplayProbe.retryClean.clearedBosses || result.gameplayProbe.retryClean.bossWeakpoints) {
     failures.push(`${result.viewport.name}: retry retained gameplay state`);
   }
