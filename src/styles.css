@@ -335,6 +335,72 @@ button {
   font-weight: 900;
 }
 
+.ui-tutorial-tip {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(74px, calc(env(safe-area-inset-bottom) + 74px));
+  z-index: 30;
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 209, 102, 0.62);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(54, 232, 159, 0.14), transparent 38%),
+    linear-gradient(180deg, rgba(6, 20, 22, 0.97), rgba(3, 8, 12, 0.97));
+  box-shadow:
+    0 0 24px rgba(54, 232, 159, 0.18),
+    0 14px 38px rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.ui-tutorial-tip.is-upgrade {
+  top: max(10px, env(safe-area-inset-top));
+  bottom: auto;
+}
+
+.ui-tutorial-tip strong {
+  color: #ffd166;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-shadow: 0 0 14px rgba(255, 209, 102, 0.28);
+}
+
+.ui-tutorial-tip span {
+  color: #eef8e8;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.ui-tutorial-tip b {
+  color: #61efff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.ui-tutorial-arrow {
+  position: absolute;
+  z-index: 29;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: #ffd166;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 0 16px rgba(255, 209, 102, 0.62),
+    0 2px 4px rgba(0, 0, 0, 0.86);
+  pointer-events: none;
+  animation: tutorialArrowPulse 0.82s ease-in-out infinite alternate;
+}
+
 .ui-upgrade {
   position: absolute;
   inset: 0;
@@ -581,6 +647,16 @@ button {
   }
 }
 
+@keyframes tutorialArrowPulse {
+  from {
+    opacity: 0.58;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-height: 640px) {
   .ui-menu,
   .ui-gameover,
@@ -624,6 +700,20 @@ button {
   .ui-button {
     min-height: 38px;
     font-size: 16px;
+  }
+
+  .ui-tutorial-tip {
+    bottom: 54px;
+    padding: 9px 10px;
+  }
+
+  .ui-tutorial-tip strong {
+    font-size: 14px;
+  }
+
+  .ui-tutorial-tip span {
+    font-size: 12px;
+    line-height: 1.28;
   }
 }
 

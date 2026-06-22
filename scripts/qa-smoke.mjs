@@ -276,7 +276,28 @@ async function runViewport(browser, viewport) {
     };
 
     scene.endRun("swarmed");
-    scene.startRun();
+    scene.startRun("tutorial");
+    scene.updateHud();
+    const tutorialStartGuide = {
+      title: scene.dom.tutorialTitle.textContent,
+      body: scene.dom.tutorialBody.textContent,
+      goal: scene.dom.tutorialGoal.textContent,
+      tipVisible: !scene.dom.tutorialTip.classList.contains("ui-hidden"),
+      arrowVisible: !scene.dom.tutorialArrow.classList.contains("ui-hidden"),
+    };
+    scene.run.tutorialMoved = true;
+    scene.run.foodCollected = 5;
+    scene.run.sxp = 8;
+    scene.run.levelElapsedMs = 13000;
+    scene.updateSpawns(16);
+    scene.updateHud();
+    const tutorialSkillGuide = {
+      title: scene.dom.tutorialTitle.textContent,
+      goal: scene.dom.tutorialGoal.textContent,
+      skillPickups: scene.pickups.filter((p) => p.type === "skill").length,
+      tipVisible: !scene.dom.tutorialTip.classList.contains("ui-hidden"),
+      arrowVisible: !scene.dom.tutorialArrow.classList.contains("ui-hidden"),
+    };
     return {
       audioBefore,
       eventStarted,
@@ -291,6 +312,10 @@ async function runViewport(browser, viewport) {
       afterFirstBoss,
       eliteProbe,
       finalBossProbe,
+      tutorialProbe: {
+        start: tutorialStartGuide,
+        skill: tutorialSkillGuide,
+      },
       retryClean: {
         boss: !!scene.boss,
         projectiles: scene.projectiles.length,
@@ -406,8 +431,8 @@ async function runViewport(browser, viewport) {
     joyDown,
     earlyUpgradeCardCount,
     upgrade,
-    endingOverflow: endingOverflow.length,
-    overflow: overflow.length,
+    endingOverflow,
+    overflow,
     retry,
   };
 }
@@ -455,6 +480,8 @@ for (const result of results) {
   if (!result.gameplayProbe.firstBossId || result.gameplayProbe.afterFirstBoss.mode !== "playing" || result.gameplayProbe.afterFirstBoss.cleared.length < 1 || !result.gameplayProbe.afterFirstBoss.nextBoss) failures.push(`${result.viewport.name}: first boss did not advance chapter flow`);
   if (!result.gameplayProbe.eliteProbe.currentElite || result.gameplayProbe.eliteProbe.eliteEnemies < 1) failures.push(`${result.viewport.name}: elite event did not spawn elites`);
   if (result.gameplayProbe.finalBossProbe.mode !== "gameover" || !result.gameplayProbe.finalBossProbe.bossDefeated || result.gameplayProbe.finalBossProbe.cleared.length < 2) failures.push(`${result.viewport.name}: final boss did not end run`);
+  if (!result.gameplayProbe.tutorialProbe.start.tipVisible || !result.gameplayProbe.tutorialProbe.start.arrowVisible || !result.gameplayProbe.tutorialProbe.start.title.includes("移动")) failures.push(`${result.viewport.name}: tutorial movement guide missing`);
+  if (!result.gameplayProbe.tutorialProbe.skill.tipVisible || !result.gameplayProbe.tutorialProbe.skill.arrowVisible || result.gameplayProbe.tutorialProbe.skill.skillPickups < 1 || !result.gameplayProbe.tutorialProbe.skill.title.includes("技能珠")) failures.push(`${result.viewport.name}: tutorial skill core guide missing`);
   if (result.gameplayProbe.retryClean.boss || result.gameplayProbe.retryClean.projectiles || result.gameplayProbe.retryClean.shots || result.gameplayProbe.retryClean.frostFields || result.gameplayProbe.retryClean.bodyCracks || result.gameplayProbe.retryClean.currentEvent || result.gameplayProbe.retryClean.currentElite || result.gameplayProbe.retryClean.clearedBosses || result.gameplayProbe.retryClean.bossWeakpoints) {
     failures.push(`${result.viewport.name}: retry retained gameplay state`);
   }
@@ -472,7 +499,7 @@ for (const result of results) {
   }
   if (result.earlyUpgradeCardCount) failures.push(`${result.viewport.name}: upgrade cards appeared too early`);
   if (!result.upgrade.reached || result.upgrade.modeAfterPick !== "playing") failures.push(`${result.viewport.name}: upgrade flow did not return to playing`);
-  if (result.endingOverflow || result.overflow) failures.push(`${result.viewport.name}: UI overflow`);
+  if (result.endingOverflow.length || result.overflow.length) failures.push(`${result.viewport.name}: UI overflow`);
   if (!result.retry.playerVisible) failures.push(`${result.viewport.name}: retry camera lost player`);
 }
 

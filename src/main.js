@@ -321,6 +321,12 @@ class SerpentLifeScene extends Phaser.Scene {
           <button class="ui-button ghost" data-action="menu">返回</button>
         </div>
       </section>
+      <aside data-bind="tutorial-tip" class="ui-tutorial-tip ui-hidden">
+        <strong data-bind="tutorial-title"></strong>
+        <span data-bind="tutorial-body"></span>
+        <b data-bind="tutorial-goal"></b>
+      </aside>
+      <div data-bind="tutorial-arrow" class="ui-tutorial-arrow ui-hidden" aria-hidden="true">➜</div>
     `;
     this.dom.screens = [...this.dom.root.querySelectorAll("[data-screen]")];
     this.dom.hearts = this.dom.root.querySelector("[data-bind='hearts']");
@@ -337,6 +343,11 @@ class SerpentLifeScene extends Phaser.Scene {
     this.dom.final = this.dom.root.querySelector("[data-bind='final']");
     this.dom.endingKicker = this.dom.root.querySelector("[data-bind='ending-kicker']");
     this.dom.endingTitle = this.dom.root.querySelector("[data-bind='ending-title']");
+    this.dom.tutorialTip = this.dom.root.querySelector("[data-bind='tutorial-tip']");
+    this.dom.tutorialTitle = this.dom.root.querySelector("[data-bind='tutorial-title']");
+    this.dom.tutorialBody = this.dom.root.querySelector("[data-bind='tutorial-body']");
+    this.dom.tutorialGoal = this.dom.root.querySelector("[data-bind='tutorial-goal']");
+    this.dom.tutorialArrow = this.dom.root.querySelector("[data-bind='tutorial-arrow']");
 
     this.bindDomAction("start", () => this.startRun("level1"));
     this.bindDomAction("start-tutorial", () => this.startRun("tutorial"));
@@ -365,6 +376,7 @@ class SerpentLifeScene extends Phaser.Scene {
       const active = node.dataset.screen === screen || (screen === "playing" && node.dataset.screen === "hud");
       node.classList.toggle("ui-hidden", !active);
     });
+    this.updateTutorialGuide?.();
   }
 
   buildMenu() {
@@ -644,6 +656,10 @@ class SerpentLifeScene extends Phaser.Scene {
       skills: {},
       selectedSlots: [],
       deathCause: "default",
+      foodCollected: 0,
+      skillCoresCollected: 0,
+      tutorialMoved: false,
+      tutorialChoseUpgrade: false,
     };
     SKILLS.forEach((skill) => {
       this.run.skills[skill.id] = 0;
@@ -830,6 +846,7 @@ class SerpentLifeScene extends Phaser.Scene {
     this.hud?.joyBase?.setPosition(pos.x, pos.y).setVisible(true);
     this.hud?.joyKnob?.setPosition(pos.x, pos.y).setVisible(true);
     this.updatePointerAngle(pointer);
+    if (this.run) this.run.tutorialMoved = true;
   }
 
   onPointerMove(pointer) {
@@ -929,7 +946,11 @@ class SerpentLifeScene extends Phaser.Scene {
       this.spawnPickup("food");
     }
     const levelCostIndex = Math.max(0, this.run.levelIndex - 1);
-    if (!this.run.firstSkillCoreGiven && levelElapsed >= level.firstSkillCoreMs && this.run.sxp >= Math.floor(v13SkillXpCost(this.run.upgradeCount, levelCostIndex) * 0.72)) {
+    const skillNeed = v13SkillXpCost(this.run.upgradeCount, levelCostIndex);
+    const firstCoreReady = level.id === "tutorial"
+      ? this.run.foodCollected >= 5 || this.run.sxp >= 8
+      : this.run.sxp >= Math.floor(skillNeed * 0.72);
+    if (!this.run.firstSkillCoreGiven && levelElapsed >= level.firstSkillCoreMs && firstCoreReady) {
       this.trySpawnSkillPickup("first_core");
       this.run.firstSkillCoreGiven = true;
     } else {
@@ -1100,6 +1121,7 @@ class SerpentLifeScene extends Phaser.Scene {
   collectFood(index) {
     const p = this.pickups[index];
     this.destroyPickup(index);
+    this.run.foodCollected = (this.run.foodCollected ?? 0) + 1;
     const reward = this.rollMemoryReward();
     this.run.mxp += reward.mxp;
     this.awardSkillXp(reward.sxp, "memory");
@@ -1121,6 +1143,9 @@ class SerpentLifeScene extends Phaser.Scene {
     this.addBurst(p.x, p.y, COLORS.reward, 56, 0.24);
     if ((this.run.skills.magnet ?? 0) > 0) this.addBitmapFx("v10-magnet-burst", 4, p.x, p.y, { size: 72 + this.run.skills.magnet * 8, alpha: 0.58, duration: 300 });
     this.floatText(p.x, p.y, grew ? `身体 +${grew}` : `记忆 +${reward.mxp}`, COLORS.reward);
+    if (reward.sxp > 0 && (this.run.levelId === "tutorial" || this.run.foodCollected <= 8 || reward.sxp > 1)) {
+      this.floatText(p.x, p.y - 24, `技能进度 +${reward.sxp}`, COLORS.cyan);
+    }
     this.playEatSound();
     this.updateGrowthStage(p);
     if (this.run.memoryOverflow > 0 && this.run.memoryOverflow % 6 === 0) this.queueUpgrade("overload");
@@ -1155,6 +1180,7 @@ class SerpentLifeScene extends Phaser.Scene {
   collectSkillPickup(index) {
     const p = this.pickups[index];
     this.destroyPickup(index);
+    this.run.skillCoresCollected = (this.run.skillCoresCollected ?? 0) + 1;
     this.addMemory("它吞下了一枚改变命运的技能核。", "skill_drop");
     this.playSkillSound("lightning");
     this.queueUpgrade("skill");
@@ -1266,6 +1292,7 @@ class SerpentLifeScene extends Phaser.Scene {
       });
       this.dom.cards.appendChild(card);
     });
+    this.updateTutorialGuide();
   }
 
   createUpgradeChoices(reason = "skill") {
@@ -1318,6 +1345,7 @@ class SerpentLifeScene extends Phaser.Scene {
       this.addMemory("它没有净化新技能，而是把身体留给下一次冒险。", "reserve");
       for (let i = 0; i < 3; i += 1) this.spawnPickup("food");
     }
+    this.run.tutorialChoseUpgrade = true;
     this.mode = "playing";
     this.showDom("playing");
     this.startCombatMusic();
@@ -1432,6 +1460,7 @@ class SerpentLifeScene extends Phaser.Scene {
     }
     this.run.segments = Math.max(V13_BALANCE.safeAfterSkillSegments, this.run.segments - cost);
     this.run.skills[skill.id] += 1;
+    this.run.tutorialChoseUpgrade = true;
     if (!this.run.selectedSlots.includes(skill.id) && this.run.selectedSlots.length < 5) this.run.selectedSlots.push(skill.id);
     this.run.buildSequence.push(skill.id);
     this.addMemory(`它消耗 ${cost} 节身体，净化了「${skill.name}」。`, skill.id);
@@ -2575,6 +2604,129 @@ class SerpentLifeScene extends Phaser.Scene {
         this.dom.bossLabel.textContent = `${this.boss.name} ${Math.round(pct * 100)}% · 护盾 ${this.boss.shield}/${this.boss.shieldMax}`;
       }
     }
+    this.updateTutorialGuide();
+  }
+
+  worldToScreenPoint(point) {
+    if (!point || !this.cameras?.main) return null;
+    const view = this.cameras.main.worldView;
+    const rect = this.game?.canvas?.getBoundingClientRect?.();
+    const width = rect?.width || window.innerWidth || this.scale.width || this.game.config.width || W;
+    const height = rect?.height || window.innerHeight || this.scale.height || this.game.config.height || H;
+    return {
+      x: clamp(((point.x - view.x) / view.width) * width, 58, width - 58),
+      y: clamp(((point.y - view.y) / view.height) * height, 58, height - 58),
+    };
+  }
+
+  tutorialNearestPickup(type = "food") {
+    const candidates = this.pickups?.filter((p) => p.type === type) ?? [];
+    if (!candidates.length) return null;
+    return candidates.reduce((best, p) => distance(this.player, p) < distance(this.player, best) ? p : best, candidates[0]);
+  }
+
+  currentTutorialGuide() {
+    if (!this.run || this.run.levelId !== "tutorial" || !["playing", "upgrade"].includes(this.mode)) return null;
+    const skillNeed = v13SkillXpCost(this.run.upgradeCount, Math.max(0, this.run.levelIndex - 1));
+    const skillCore = this.tutorialNearestPickup("skill");
+    const rect = this.game?.canvas?.getBoundingClientRect?.();
+    const screenWidth = rect?.width || window.innerWidth || this.scale.width || W;
+    const screenHeight = rect?.height || window.innerHeight || this.scale.height || H;
+    if (this.mode === "upgrade") {
+      return {
+        title: "选择突变",
+        body: "技能会消耗身体。身体也是生命，所以你可以选技能，也可以选“保留身体”。",
+        goal: "选一张卡，看看身体和技能怎样变化",
+        target: { x: screenWidth / 2, y: screenHeight * 0.52, screen: true },
+      };
+    }
+    if (!this.run.tutorialMoved) {
+      return {
+        title: "第一步：移动",
+        body: "按住屏幕任意安全位置拖动，蛇首会朝拖动方向前进。松手后摇杆会消失。",
+        goal: "拖动一次，让蛇头动起来",
+        target: { x: this.player.x, y: this.player.y },
+      };
+    }
+    if ((this.run.foodCollected ?? 0) < 5) {
+      return {
+        title: "第二步：吞噬记忆",
+        body: "金色记忆会增加成长经验，也会增加技能进度。成长经验满了，身体才会长一节。",
+        goal: `吃记忆：${Math.min(this.run.foodCollected ?? 0, 5)}/5`,
+        target: this.tutorialNearestPickup("food") ?? { x: this.player.x + 120, y: this.player.y },
+      };
+    }
+    if (skillCore) {
+      return {
+        title: "第三步：技能珠",
+        body: "这颗更亮的宝石是技能珠。吃到它才会打开技能选择，不是普通经验。",
+        goal: "吃掉技能珠，打开技能卡",
+        target: skillCore,
+      };
+    }
+    if ((this.run.upgradeCount ?? 0) === 0 && !this.run.pendingUpgrade) {
+      return {
+        title: "技能进度",
+        body: "左上角“技”是技能进度。满了会生成技能珠；继续吃记忆或击杀敌人都会推进它。",
+        goal: `技能进度：${Math.floor(this.run.sxp)}/${skillNeed}`,
+        target: { x: 92, y: 72, screen: true },
+      };
+    }
+    if (!this.run.tutorialChoseUpgrade) {
+      return {
+        title: "突变已储存",
+        body: "技能卡会等你安全时打开。危险太近时会暂存，避免突然打断移动。",
+        goal: "远离敌人，等待技能卡出现",
+        target: { x: this.player.x, y: this.player.y },
+      };
+    }
+    if ((this.run.levelElapsedMs ?? 0) < 62000) {
+      return {
+        title: "身体就是生命",
+        body: "头部受击会掉身体；身体碰到敌人会产生裂痕。身体越长，容错越高，也能支付更多技能。",
+        goal: "活到 Boss 出现",
+        target: { x: this.player.x, y: this.player.y },
+      };
+    }
+    return {
+      title: "教学 Boss",
+      body: "所有攻击技能都能伤害 Boss。观察血条，围绕身体长度和技能继续取舍。",
+      goal: "击败残忆蛇影",
+      target: this.boss ?? { x: this.player.x, y: this.player.y - 160 },
+    };
+  }
+
+  updateTutorialGuide() {
+    if (!this.dom?.tutorialTip || !this.dom?.tutorialArrow) return;
+    const guide = this.currentTutorialGuide();
+    if (!guide) {
+      this.dom.tutorialTip.classList.add("ui-hidden");
+      this.dom.tutorialArrow.classList.add("ui-hidden");
+      return;
+    }
+    this.dom.tutorialTitle.textContent = guide.title;
+    this.dom.tutorialBody.textContent = guide.body;
+    this.dom.tutorialGoal.textContent = guide.goal;
+    this.dom.tutorialTip.classList.toggle("is-upgrade", this.mode === "upgrade");
+    this.dom.tutorialTip.classList.remove("ui-hidden");
+    const rect = this.game?.canvas?.getBoundingClientRect?.();
+    const width = rect?.width || window.innerWidth || this.scale.width || W;
+    const height = rect?.height || window.innerHeight || this.scale.height || H;
+    const rawScreen = guide.target?.screen ? guide.target : this.worldToScreenPoint(guide.target);
+    if (!rawScreen) {
+      this.dom.tutorialArrow.classList.add("ui-hidden");
+      return;
+    }
+    const screen = {
+      x: clamp(rawScreen.x, 58, width - 58),
+      y: clamp(rawScreen.y, 58, height - 58),
+    };
+    const tipY = this.mode === "upgrade" ? height * 0.22 : height - 150;
+    const angle = Math.atan2(tipY - screen.y, (width / 2) - screen.x);
+    this.dom.tutorialArrow.style.left = `${screen.x}px`;
+    this.dom.tutorialArrow.style.top = `${screen.y}px`;
+    this.dom.tutorialArrow.style.transform = `translate(-50%, -50%) rotate(${angle}rad)`;
+    this.dom.tutorialArrow.classList.remove("ui-hidden");
   }
 
   updateCamera(ms) {
